@@ -1,0 +1,38 @@
+Input & Pivoting
+
+    1. Pivots are externally provided — not computed at runtime (no median-of-three or any runtime pivot selection). Read from pivot
+    files like pivot_vector_100000_8_2.txt.
+    2. P pivots define P bucket boundaries — proc i gets elements in (pivot[i-1], pivot[i]], proc 0 gets ≤ pivot[0], pivot[P-1] ≥
+    max(array).
+    3. Input format is single-line comma-separated — no header line, no newlines within data.
+    4. Phase 1 is sequential — proc 0 reads everything, partitions, and sends buckets to all other procs via point-to-point MPI (not
+    parallel/recursive hypercube splitting).
+
+    Load Balancing
+
+    5. Adjacent-only LB — exchanges only between rank-adjacent processors (i ↔ i-1, i ↔ i+1) on a linear chain, to preserve PSOR.
+    6. CL(A(i)) drives LB decisions — transfer decisions use the qualitative computational load estimate, not just element count n(i).
+    7. CL estimation is O(n) — uses adjacent inversion count as proxy for insertion sort difficulty.
+    8. LB operates on unsorted subarrays — LB happens before the final insertion sort (Phase 3 before Phase 4).
+    9. CL re-estimated after each LB round — to feed updated load info into the next round's decisions.
+
+    Timing & Measurement
+
+    10. T_no_lb and T_with_lb come from two separate independent runs — --mode=no_lb vs --mode=with_lb, not constructed from a single
+    run.
+    11. Initial CL measured after pivoting, before sorting — on unsorted subarrays, to capture true qualitative imbalance.
+    12. Final imbalance measured after LB, before final sort — not on already-sorted subarrays.
+    13. Parallel time = max across all ranks (wall-clock).
+
+    Infrastructure
+
+    14. P ∈ {1, 2, 4, 8} — powers of 2, up to 3D hypercube.
+    15. Lakeshore HPC with account csece566_dutt, OpenMPI module, srun --mpi=pmix.
+    16. Working directory: /home/yqu30/csece566_dutt_link/yqu30/final.
+    17. Build via Makefile with mpicc -O2.
+
+    Verification & Output
+
+    18. Lightweight PSOR verification — gather only min/max/size per proc to rank 0 (not full subarrays).
+    19. Token-passing output — sequential file writing in rank order.
+    20. Stat file is per-experiment-config — not per-rank.
