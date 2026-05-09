@@ -3,7 +3,7 @@ CFLAGS = -O2
 LDFLAGS = -lm
 
 SRC_DIR = src
-SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/parallel_sort.c $(SRC_DIR)/sorting.c $(SRC_DIR)/load_analysis.c $(SRC_DIR)/load_balance.c $(SRC_DIR)/output.c
+SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/load_balance.c
 TARGET = parallel_sort
 
 .PHONY: all clean

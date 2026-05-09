@@ -1,9 +1,102 @@
 #include "load_balance.h"
-#include "config.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
+
+#define LB_IMBALANCE_THRESH 0.2
+
+/* ------------------------------------------------------------------ */
+/*  CL estimation                                                      */
+/* ------------------------------------------------------------------ */
+
+estimate_cl_fn estimate_cl_func = estimate_cl;
+
+// An estimate of the computational load of an array.
+double estimate_cl(int *arr, int n) {
+    if (n <= 1) return (double)n;
+
+    /* Count adjacent inversions: arr[i] > arr[i+1] */
+    long inversions = 0;
+    for (int i = 0; i < n - 1; i++) {
+        if (arr[i] > arr[i + 1])
+            inversions++;
+    }
+
+    /*
+     * CL = n + inversions * (n - 1)
+     *
+     * Fully sorted (0 inversions):   CL = n          ~ Theta(n)
+     * Fully reverse (n-1 inversions): CL = n + (n-1)^2 ~ Theta(n^2)
+     */
+    return (double)n + (double)inversions * (double)(n - 1);
+}
+
+// Randomized estimate of computational load:
+// sample all inversions including non-adjacent ones
+double estimate_cl_rand(int *arr, int n) {
+    if (n <= 1) return (double)n;
+
+    /* Sample inversions: arr[a] > arr[b] */
+    long inversions = 0;
+
+    for (int i = 0; i < n - 1; i++) {
+	// Choose uniform random increasing pair
+	int a = rand() % n;
+	int b = rand() % (n-1);
+	if (b >= a) {
+	    b++;
+	} else {
+	    int tmp = a;
+	    a = b;
+	    b = tmp;
+	}
+	if (arr[a] > arr[b]) {
+	    inversions++;
+	}
+    }
+
+    return (double)n + (double)inversions * (double)(n - 1);
+}
+
+double compute_quantitative_imbalance(int *sizes, int p) {
+    /* mean = N/P */
+    double sum = 0.0;
+    for (int i = 0; i < p; i++)
+        sum += sizes[i];
+    double mean = sum / p;
+
+    if (mean == 0.0) return 0.0;
+
+    /* StdDev */
+    double var = 0.0;
+    for (int i = 0; i < p; i++) {
+        double diff = sizes[i] - mean;
+        var += diff * diff;
+    }
+    double stddev = sqrt(var / p);
+
+    return stddev / mean;
+}
+
+double compute_qualitative_imbalance(double *loads, int p) {
+    double sum = 0.0;
+    for (int i = 0; i < p; i++)
+        sum += loads[i];
+    double mean = sum / p;
+
+    if (mean == 0.0) return 0.0;
+
+    double var = 0.0;
+    for (int i = 0; i < p; i++) {
+        double diff = loads[i] - mean;
+        var += diff * diff;
+    }
+    double stddev = sqrt(var / p);
+
+    return stddev / mean;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Partial selection: partition-based O(n) average                    */
@@ -57,7 +150,7 @@ static void select_k_largest(int *arr, int n, int k) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  SubArray realloc helper                                           */
+/*  SubArray helpers                                                   */
 /* ------------------------------------------------------------------ */
 
 static void subarray_grow(SubArray *sa, int extra) {
@@ -67,6 +160,15 @@ static void subarray_grow(SubArray *sa, int extra) {
         sa->data = (int *)realloc(sa->data, new_cap * sizeof(int));
         sa->capacity = new_cap;
     }
+}
+
+void subarray_free(SubArray *sa) {
+    if (sa->data) {
+        free(sa->data);
+        sa->data = NULL;
+    }
+    sa->size = 0;
+    sa->capacity = 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -86,70 +188,6 @@ static int compute_k(double my_load, int my_size,
     if (k < 1) k = 1;
     if (k > max_k) k = max_k;
     return k;
-}
-
-/* ------------------------------------------------------------------ */
-/*  One LB exchange with a single neighbor                            */
-/* ------------------------------------------------------------------ */
-
-/*
- * direction: -1 = left neighbor (send k smallest), +1 = right neighbor (send k largest)
- * Returns number of elements actually sent (may be 0).
- */
-static int exchange_one_neighbor(int rank, int neighbor, int direction,
-                                 SubArray *sa, int k) {
-    if (k <= 0 || sa->size <= 1) return 0;
-    if (k >= sa->size) k = sa->size - 1;  /* keep at least 1 */
-
-    int send_count = k;
-    int recv_count = 0;
-
-    if (direction < 0) {
-        /* Send k smallest to left neighbor */
-        select_k_smallest(sa->data, sa->size, k);
-        /* arr[0..k-1] are the k smallest */
-
-        /* Even ranks: send first, then recv. Odd ranks: recv first, then send.
-           But this function is called in the correct order by the caller. */
-        MPI_Sendrecv(
-            sa->data, send_count, MPI_INT, neighbor, 10,  /* send */
-            &recv_count, 1, MPI_INT, neighbor, 20,        /* recv count */
-            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        /* Remove sent elements: shift arr[k..n-1] to arr[0..n-k-1] */
-        memmove(sa->data, sa->data + k, (sa->size - k) * sizeof(int));
-        sa->size -= k;
-
-        /* Receive elements from neighbor (if neighbor sent to us) */
-        if (recv_count > 0) {
-            subarray_grow(sa, recv_count);
-            MPI_Recv(sa->data + sa->size, recv_count, MPI_INT,
-                     neighbor, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            sa->size += recv_count;
-        }
-
-    } else {
-        /* Send k largest to right neighbor */
-        select_k_largest(sa->data, sa->size, k);
-        /* arr[n-k..n-1] are the k largest */
-
-        MPI_Sendrecv(
-            sa->data + (sa->size - k), send_count, MPI_INT, neighbor, 20, /* send */
-            &recv_count, 1, MPI_INT, neighbor, 10,                        /* recv count */
-            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        sa->size -= k;  /* trim the sent elements from the end */
-
-        /* Receive elements from neighbor */
-        if (recv_count > 0) {
-            subarray_grow(sa, recv_count);
-            MPI_Recv(sa->data + sa->size, recv_count, MPI_INT,
-                     neighbor, 21, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            sa->size += recv_count;
-        }
-    }
-
-    return send_count;
 }
 
 /* ------------------------------------------------------------------ */
