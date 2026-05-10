@@ -4,9 +4,27 @@
 #include <mpi.h>
 #include "load_balance.h"
 
-/* ------------------------------------------------------------------ */
-/*  main                                                               */
-/* ------------------------------------------------------------------ */
+/*
+ * Verify the Partition-Sorted-Order Relationship: for every adjacent pair
+ * of ranks, max(A(i)) <= min(A(i+1)). Aborts the whole job from rank 0 on
+ * the first violation seen. `phase` is interpolated into the error message.
+ */
+static void check_psor_or_abort(int rank, int p, int local_min, int local_max,
+                                const char *phase) {
+    int all_mins[MAX_P], all_maxs[MAX_P];
+    MPI_Gather(&local_min, 1, MPI_INT, all_mins, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&local_max, 1, MPI_INT, all_maxs, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (rank == 0) {
+        for (int i = 0; i < p - 1; i++) {
+            if (all_maxs[i] > all_mins[i + 1]) {
+                fprintf(stderr,
+                        "FATAL: PSOR VIOLATION %s: max(A(%d))=%d > min(A(%d))=%d; aborting.\n",
+                        phase, i, all_maxs[i], i + 1, all_mins[i + 1]);
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
@@ -202,28 +220,7 @@ int main(int argc, char *argv[]) {
             if (local_array.data[i] > local_max) local_max = local_array.data[i];
         }
     }
-
-    int all_mins[MAX_P], all_maxs[MAX_P];
-    MPI_Gather(&local_min, 1, MPI_INT, all_mins, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Gather(&local_max, 1, MPI_INT, all_maxs, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    int psor_ok = 1;
-    if (rank == 0) {
-        for (int i = 0; i < p - 1; i++) {
-            if (all_maxs[i] > all_mins[i + 1]) {
-                fprintf(stderr,
-                        "FATAL: PSOR VIOLATION post-pivot: max(A(%d))=%d > min(A(%d))=%d\n",
-                        i, all_maxs[i], i + 1, all_mins[i + 1]);
-                psor_ok = 0;
-            }
-        }
-    }
-    MPI_Bcast(&psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    if (!psor_ok) {
-        if (rank == 0)
-            fprintf(stderr, "FATAL: post-pivot PSOR violated; aborting.\n");
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    }
+    check_psor_or_abort(rank, p, local_min, local_max, "post-pivot");
 
     /* ================================================================ */
     /*  Phase 3: Load Balancing (conditional)                            */
@@ -245,28 +242,7 @@ int main(int argc, char *argv[]) {
                 if (local_array.data[i] > local_max) local_max = local_array.data[i];
             }
         }
-
-        MPI_Gather(&local_min, 1, MPI_INT, all_mins, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&local_max, 1, MPI_INT, all_maxs, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&local_array.size, 1, MPI_INT, all_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        int post_lb_psor_ok = 1;
-        if (rank == 0) {
-            for (int i = 0; i < p - 1; i++) {
-                if (all_maxs[i] > all_mins[i + 1]) {
-                    fprintf(stderr,
-                            "FATAL: PSOR VIOLATION post-LB: max(A(%d))=%d > min(A(%d))=%d\n",
-                            i, all_maxs[i], i + 1, all_mins[i + 1]);
-                    post_lb_psor_ok = 0;
-                }
-            }
-        }
-        MPI_Bcast(&post_lb_psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        if (!post_lb_psor_ok) {
-            if (rank == 0)
-                fprintf(stderr, "FATAL: post-LB PSOR violated; aborting.\n");
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+        check_psor_or_abort(rank, p, local_min, local_max, "post-LB");
     } else {
         /* Set final imbalance = initial (no LB performed) */
         metrics.final_quant_imbalance = metrics.initial_quant_imbalance;
@@ -300,56 +276,20 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     /*  Phase 5: Final PSOR + sortedness verification                    */
     /* ================================================================ */
-    {
-        /* Each rank checks its own subarray is fully sorted (linear scan) */
-        int local_sorted = 1;
-        for (int i = 1; i < local_array.size; i++) {
-            if (local_array.data[i - 1] > local_array.data[i]) {
-                fprintf(stderr,
-                        "FATAL [rank %d]: local subarray not sorted at index %d "
-                        "(data[%d]=%d > data[%d]=%d)\n",
-                        rank, i, i - 1, local_array.data[i - 1],
-                        i, local_array.data[i]);
-                local_sorted = 0;
-                break;
-            }
-        }
-
-        /* After sorting: min = first element, max = last element */
-        int sorted_min = 0, sorted_max = 0;
-        if (local_array.size > 0) {
-            sorted_min = local_array.data[0];
-            sorted_max = local_array.data[local_array.size - 1];
-        }
-
-        int final_mins[MAX_P], final_maxs[MAX_P], final_sizes[MAX_P];
-        MPI_Gather(&sorted_min,        1, MPI_INT, final_mins,  1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&sorted_max,        1, MPI_INT, final_maxs,  1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&local_array.size,  1, MPI_INT, final_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        int global_sorted;
-        MPI_Allreduce(&local_sorted, &global_sorted, 1, MPI_INT,
-                      MPI_LAND, MPI_COMM_WORLD);
-
-        int final_psor_ok = 1;
-        if (rank == 0) {
-            for (int i = 0; i < p - 1; i++) {
-                if (final_maxs[i] > final_mins[i + 1]) {
-                    fprintf(stderr,
-                            "FATAL: PSOR VIOLATION post-sort: max(A(%d))=%d > min(A(%d))=%d\n",
-                            i, final_maxs[i], i + 1, final_mins[i + 1]);
-                    final_psor_ok = 0;
-                }
-            }
-        }
-        MPI_Bcast(&final_psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        if (!final_psor_ok || !global_sorted) {
-            if (rank == 0)
-                fprintf(stderr, "FATAL: post-sort verification failed; aborting.\n");
+    /* Each rank scans its own subarray; first violator aborts the job. */
+    for (int i = 1; i < local_array.size; i++) {
+        if (local_array.data[i - 1] > local_array.data[i]) {
+            fprintf(stderr,
+                    "FATAL [rank %d]: local subarray not sorted at index %d "
+                    "(data[%d]=%d > data[%d]=%d); aborting.\n",
+                    rank, i, i - 1, local_array.data[i - 1],
+                    i, local_array.data[i]);
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
     }
+    int sorted_min = local_array.size > 0 ? local_array.data[0] : 0;
+    int sorted_max = local_array.size > 0 ? local_array.data[local_array.size - 1] : 0;
+    check_psor_or_abort(rank, p, sorted_min, sorted_max, "post-sort");
 
     /* ================================================================ */
     /*  Phase 6: Output (token-passed file write) + statistics           */
@@ -380,41 +320,24 @@ int main(int argc, char *argv[]) {
     /* ---- Token-passing write: rank 0 truncates, then 1..p-1 append in order ---- */
     {
         int token = 0;
-        if (rank == 0) {
-            FILE *fp = fopen(output_file, "w");
-            if (!fp) {
-                fprintf(stderr, "Error: cannot open output file %s\n", output_file);
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
-            fprintf(fp, "Rank %d:", rank);
-            for (int i = 0; i < local_array.size; i++)
-                fprintf(fp, " %d", local_array.data[i]);
-            fprintf(fp, "\n");
-            fflush(fp);
-            fclose(fp);
-
-            if (p > 1)
-                MPI_Send(&token, 1, MPI_INT, 1, 500, MPI_COMM_WORLD);
-        } else {
+        if (rank > 0)
             MPI_Recv(&token, 1, MPI_INT, rank - 1, 500,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            FILE *fp = fopen(output_file, "a");
-            if (!fp) {
-                fprintf(stderr, "Rank %d: cannot open output file %s\n",
-                        rank, output_file);
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
-            fprintf(fp, "Rank %d:", rank);
-            for (int i = 0; i < local_array.size; i++)
-                fprintf(fp, " %d", local_array.data[i]);
-            fprintf(fp, "\n");
-            fflush(fp);
-            fclose(fp);
-
-            if (rank + 1 < p)
-                MPI_Send(&token, 1, MPI_INT, rank + 1, 500, MPI_COMM_WORLD);
+        FILE *fp = fopen(output_file, rank == 0 ? "w" : "a");
+        if (!fp) {
+            fprintf(stderr, "Rank %d: cannot open output file %s\n",
+                    rank, output_file);
+            MPI_Abort(MPI_COMM_WORLD, 1);
         }
+        fprintf(fp, "Rank %d:", rank);
+        for (int i = 0; i < local_array.size; i++)
+            fprintf(fp, " %d", local_array.data[i]);
+        fprintf(fp, "\n");
+        fclose(fp);
+
+        if (rank + 1 < p)
+            MPI_Send(&token, 1, MPI_INT, rank + 1, 500, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
@@ -451,7 +374,7 @@ int main(int argc, char *argv[]) {
         printf("Final qualitative imbalance:    %.6f\n", metrics.final_qual_imbalance);
     }
 
-    subarray_free(&local_array);
+    free(local_array.data);
     MPI_Finalize();
     return 0;
 }

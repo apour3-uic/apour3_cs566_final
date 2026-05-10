@@ -83,9 +83,4 @@ void synchronous_lb_linear(int rank, int p,
                            int max_rounds,
                            LoadMetrics *metrics);
 
-/*
- * Free SubArray data.
- */
-void subarray_free(SubArray *sa);
-
 #endif /* LOAD_BALANCE_H */

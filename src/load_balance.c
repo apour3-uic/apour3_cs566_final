@@ -162,15 +162,6 @@ static void subarray_grow(SubArray *sa, int extra) {
     }
 }
 
-void subarray_free(SubArray *sa) {
-    if (sa->data) {
-        free(sa->data);
-        sa->data = NULL;
-    }
-    sa->size = 0;
-    sa->capacity = 0;
-}
-
 /* ------------------------------------------------------------------ */
 /*  Compute transfer size k from CL difference                        */
 /* ------------------------------------------------------------------ */
