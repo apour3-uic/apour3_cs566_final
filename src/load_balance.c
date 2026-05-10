@@ -182,208 +182,123 @@ static int compute_k(double my_load, int my_size,
 }
 
 /* ------------------------------------------------------------------ */
-/*  Phase 3: Synchronous LB on linear chain                          */
+/*  Phase 3: Synchronous LB on linear chain                            */
 /* ------------------------------------------------------------------ */
+
+/*
+ * Pairwise transfer step. Both ranks of an adjacent pair call this with
+ * each other as `partner`. They exchange CL, the higher-load side selects
+ * its `k` extreme elements (largest if it's the lower-rank, smallest if
+ * higher-rank) and sends; the lower-load side computes k=0 and sends an
+ * empty message. Both sides receive whatever the partner sent.
+ *
+ * Tags `tag_lo_send` / `tag_hi_send` must be unique per (round, phase) and
+ * differ from each other (so the deadlock-free Send-then-Recv ordering on
+ * the lower-rank side and Recv-then-Send on the higher-rank side can match
+ * messages by tag).
+ */
+static void lb_exchange(SubArray *local_array, int rank, int partner,
+                        int tag_lo_send, int tag_hi_send) {
+    /* Exchange current CL pairwise (no Allgather needed). */
+    double my_cl = estimate_cl_func(local_array->data, local_array->size);
+    double partner_cl;
+    MPI_Sendrecv(&my_cl,      1, MPI_DOUBLE, partner, tag_lo_send,
+                 &partner_cl, 1, MPI_DOUBLE, partner, tag_lo_send,
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    int max_k = local_array->size / 4;
+    if (max_k < 1) max_k = 1;
+    int k = compute_k(my_cl, local_array->size, partner_cl, max_k);
+
+    int is_lower = (rank < partner);
+    int my_send_tag = is_lower ? tag_lo_send + 1 : tag_hi_send + 1;
+    int my_recv_tag = is_lower ? tag_hi_send + 1 : tag_lo_send + 1;
+
+    /* Pick what to send: lower-rank sends largest, higher-rank sends smallest. */
+    if (k > 0) {
+        if (is_lower) {
+            select_k_largest(local_array->data, local_array->size, k);
+        } else {
+            select_k_smallest(local_array->data, local_array->size, k);
+        }
+    }
+
+    /* Deadlock-free: lower-rank sends first then recvs; higher-rank reverses. */
+    if (is_lower) {
+        if (k > 0) {
+            MPI_Send(local_array->data + (local_array->size - k),
+                     k, MPI_INT, partner, my_send_tag, MPI_COMM_WORLD);
+            local_array->size -= k;
+        } else {
+            MPI_Send(NULL, 0, MPI_INT, partner, my_send_tag, MPI_COMM_WORLD);
+        }
+    }
+
+    MPI_Status status;
+    MPI_Probe(partner, my_recv_tag, MPI_COMM_WORLD, &status);
+    int incoming;
+    MPI_Get_count(&status, MPI_INT, &incoming);
+    if (incoming > 0) {
+        subarray_grow(local_array, incoming);
+        MPI_Recv(local_array->data + local_array->size, incoming, MPI_INT,
+                 partner, my_recv_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        local_array->size += incoming;
+    } else {
+        MPI_Recv(NULL, 0, MPI_INT, partner, my_recv_tag,
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
+    if (!is_lower) {
+        if (k > 0) {
+            MPI_Send(local_array->data, k, MPI_INT,
+                     partner, my_send_tag, MPI_COMM_WORLD);
+            memmove(local_array->data, local_array->data + k,
+                    (local_array->size - k) * sizeof(int));
+            local_array->size -= k;
+        } else {
+            MPI_Send(NULL, 0, MPI_INT, partner, my_send_tag, MPI_COMM_WORLD);
+        }
+    }
+}
 
 void synchronous_lb_linear(int rank, int p,
                            SubArray *local_array,
                            int max_rounds,
                            LoadMetrics *metrics) {
-    int all_sizes[MAX_P];
-    double all_loads[MAX_P];
+    double all_loads[p];
 
     for (int round = 0; round < max_rounds; round++) {
-        /* Step 1: Gather global load info */
+        /* Global imbalance check (early termination). This is the only step
+         * that needs an Allgather; the per-pair transfer decisions below are
+         * purely pairwise. */
         double local_cl = estimate_cl_func(local_array->data, local_array->size);
-
-        MPI_Allgather(&local_array->size, 1, MPI_INT,
-                      all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Allgather(&local_cl, 1, MPI_DOUBLE,
                       all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        if (compute_qualitative_imbalance(all_loads, p) < LB_IMBALANCE_THRESH) break;
 
-        /* Check early termination */
-        double qual_imb = compute_qualitative_imbalance(all_loads, p);
-        if (qual_imb < LB_IMBALANCE_THRESH) break;
-
-        /* Step 2: Compute k for left and right neighbors */
-        int k_left = 0, k_right = 0;
-        int max_transfer = local_array->size / 4;
-        if (max_transfer < 1) max_transfer = 1;
-
-        if (rank > 0) {
-            k_left = compute_k(all_loads[rank], all_sizes[rank],
-                               all_loads[rank - 1], max_transfer);
-        }
-        if (rank < p - 1) {
-            k_right = compute_k(all_loads[rank], all_sizes[rank],
-                                all_loads[rank + 1], max_transfer);
-        }
-
-        /* Dual-send guard: k_left + k_right <= size - 1 */
-        if (k_left + k_right >= local_array->size) {
-            double total_k = k_left + k_right;
-            int budget = local_array->size - 1;
-            if (budget < 0) budget = 0;
-            k_left  = (int)(k_left  * budget / total_k);
-            k_right = (int)(k_right * budget / total_k);
-            if (k_left + k_right > budget) k_right = budget - k_left;
-        }
-
-        /*
-         * Step 3: Execute transfers with deadlock-free scheduling.
-         *
-         * We use a simple paired exchange pattern:
-         *   - Phase A: even ranks exchange with right neighbor (rank+1)
-         *   - Phase B: even ranks exchange with left neighbor (rank-1)
-         *
-         * In each phase, the "sender" (higher CL) sends elements and
-         * the "receiver" (lower CL) receives. We use MPI_Sendrecv so
-         * both sides participate symmetrically.
-         */
-
-        /* Phase A: even-odd pairs (0↔1, 2↔3, 4↔5, 6↔7) */
+        /* Phase A: pairs (0,1), (2,3), (4,5), ... */
+        int tag_a_lo = 100 + round * 10;
+        int tag_a_hi = 200 + round * 10;
         if (rank % 2 == 0 && rank + 1 < p) {
-            /* I'm even, partner is rank+1 */
-            int partner = rank + 1;
-            if (k_right > 0) {
-                /* I send k_right largest to right */
-                select_k_largest(local_array->data, local_array->size, k_right);
-                MPI_Send(local_array->data + (local_array->size - k_right),
-                         k_right, MPI_INT, partner, 100 + round,
-                         MPI_COMM_WORLD);
-                local_array->size -= k_right;
-            } else {
-                /* Send 0 marker */
-                MPI_Send(NULL, 0, MPI_INT, partner, 100 + round,
-                         MPI_COMM_WORLD);
-            }
-            /* Receive from partner */
-            MPI_Status status;
-            MPI_Probe(partner, 200 + round, MPI_COMM_WORLD, &status);
-            int incoming;
-            MPI_Get_count(&status, MPI_INT, &incoming);
-            if (incoming > 0) {
-                subarray_grow(local_array, incoming);
-                MPI_Recv(local_array->data + local_array->size,
-                         incoming, MPI_INT, partner, 200 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                local_array->size += incoming;
-            } else {
-                MPI_Recv(NULL, 0, MPI_INT, partner, 200 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-
+            lb_exchange(local_array, rank, rank + 1, tag_a_lo, tag_a_hi);
         } else if (rank % 2 == 1) {
-            /* I'm odd, partner is rank-1 */
-            int partner = rank - 1;
-            /* Receive from partner first */
-            MPI_Status status;
-            MPI_Probe(partner, 100 + round, MPI_COMM_WORLD, &status);
-            int incoming;
-            MPI_Get_count(&status, MPI_INT, &incoming);
-            if (incoming > 0) {
-                subarray_grow(local_array, incoming);
-                MPI_Recv(local_array->data + local_array->size,
-                         incoming, MPI_INT, partner, 100 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                local_array->size += incoming;
-            } else {
-                MPI_Recv(NULL, 0, MPI_INT, partner, 100 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-            /* Then send k_left smallest to left */
-            if (k_left > 0) {
-                select_k_smallest(local_array->data, local_array->size, k_left);
-                MPI_Send(local_array->data, k_left, MPI_INT,
-                         partner, 200 + round, MPI_COMM_WORLD);
-                memmove(local_array->data,
-                        local_array->data + k_left,
-                        (local_array->size - k_left) * sizeof(int));
-                local_array->size -= k_left;
-            } else {
-                MPI_Send(NULL, 0, MPI_INT, partner, 200 + round,
-                         MPI_COMM_WORLD);
-            }
+            lb_exchange(local_array, rank, rank - 1, tag_a_lo, tag_a_hi);
         }
-
         MPI_Barrier(MPI_COMM_WORLD);
 
-        /* Phase B: odd-even pairs (1↔2, 3↔4, 5↔6) */
+        /* Phase B: pairs (1,2), (3,4), (5,6), ... */
+        int tag_b_lo = 300 + round * 10;
+        int tag_b_hi = 400 + round * 10;
         if (rank % 2 == 1 && rank + 1 < p) {
-            /* I'm odd, partner is rank+1 */
-            int partner = rank + 1;
-            /* Recompute k_right since sizes changed in Phase A */
-            double cl = estimate_cl_func(local_array->data, local_array->size);
-            double partner_load = all_loads[partner]; /* approximate */
-            int kr = compute_k(cl, local_array->size,
-                               partner_load, local_array->size / 4 > 0 ? local_array->size / 4 : 1);
-            if (kr > 0) {
-                select_k_largest(local_array->data, local_array->size, kr);
-                MPI_Send(local_array->data + (local_array->size - kr),
-                         kr, MPI_INT, partner, 300 + round,
-                         MPI_COMM_WORLD);
-                local_array->size -= kr;
-            } else {
-                MPI_Send(NULL, 0, MPI_INT, partner, 300 + round,
-                         MPI_COMM_WORLD);
-            }
-            /* Receive from partner */
-            MPI_Status status;
-            MPI_Probe(partner, 400 + round, MPI_COMM_WORLD, &status);
-            int incoming;
-            MPI_Get_count(&status, MPI_INT, &incoming);
-            if (incoming > 0) {
-                subarray_grow(local_array, incoming);
-                MPI_Recv(local_array->data + local_array->size,
-                         incoming, MPI_INT, partner, 400 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                local_array->size += incoming;
-            } else {
-                MPI_Recv(NULL, 0, MPI_INT, partner, 400 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-
+            lb_exchange(local_array, rank, rank + 1, tag_b_lo, tag_b_hi);
         } else if (rank % 2 == 0 && rank > 0) {
-            /* I'm even (>0), partner is rank-1 */
-            int partner = rank - 1;
-            /* Receive from partner first */
-            MPI_Status status;
-            MPI_Probe(partner, 300 + round, MPI_COMM_WORLD, &status);
-            int incoming;
-            MPI_Get_count(&status, MPI_INT, &incoming);
-            if (incoming > 0) {
-                subarray_grow(local_array, incoming);
-                MPI_Recv(local_array->data + local_array->size,
-                         incoming, MPI_INT, partner, 300 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                local_array->size += incoming;
-            } else {
-                MPI_Recv(NULL, 0, MPI_INT, partner, 300 + round,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-            /* Send k smallest to left */
-            double cl = estimate_cl_func(local_array->data, local_array->size);
-            double partner_load = all_loads[partner]; /* approximate */
-            int kl = compute_k(cl, local_array->size,
-                               partner_load, local_array->size / 4 > 0 ? local_array->size / 4 : 1);
-            if (kl > 0) {
-                select_k_smallest(local_array->data, local_array->size, kl);
-                MPI_Send(local_array->data, kl, MPI_INT,
-                         partner, 400 + round, MPI_COMM_WORLD);
-                memmove(local_array->data,
-                        local_array->data + kl,
-                        (local_array->size - kl) * sizeof(int));
-                local_array->size -= kl;
-            } else {
-                MPI_Send(NULL, 0, MPI_INT, partner, 400 + round,
-                         MPI_COMM_WORLD);
-            }
+            lb_exchange(local_array, rank, rank - 1, tag_b_lo, tag_b_hi);
         }
-
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
     /* Final imbalance measurement after LB, before sorting */
+    int all_sizes[p];
     double final_cl = estimate_cl_func(local_array->data, local_array->size);
     MPI_Allgather(&local_array->size, 1, MPI_INT,
                   all_sizes, 1, MPI_INT, MPI_COMM_WORLD);

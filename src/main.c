@@ -11,7 +11,7 @@
  */
 static void check_psor_or_abort(int rank, int p, int local_min, int local_max,
                                 const char *phase) {
-    int all_mins[MAX_P], all_maxs[MAX_P];
+    int all_mins[p], all_maxs[p];
     MPI_Gather(&local_min, 1, MPI_INT, all_mins, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Gather(&local_max, 1, MPI_INT, all_maxs, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (rank == 0) {
@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &p);
 
     /* Validate P is power of 2 */
-    if (p < 1 || p > MAX_P || (p & (p - 1)) != 0) {
+    if (p < 1 || (p & (p - 1)) != 0) {
         if (rank == 0)
-            fprintf(stderr, "Error: P must be a power of 2 between 1 and %d (got %d)\n", MAX_P, p);
+            fprintf(stderr, "Error: P must be a power of 2 (got %d)\n", p);
         MPI_Finalize();
         return 1;
     }
@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
             /* Partition global_array into p buckets:
              *   bucket b = { x : pivots[b-1] < x <= pivots[b] }
              *   bucket 0 = { x <= pivots[0] }; bucket p-1 = { x > pivots[p-2] } */
-            int *buckets[MAX_P];
-            int bucket_sizes[MAX_P];
+            int *buckets[p];
+            int bucket_sizes[p];
             memset(bucket_sizes, 0, p * sizeof(int));
             for (int i = 0; i < N; i++) {
                 int b;
@@ -200,8 +200,8 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     double local_cl = estimate_cl_func(local_array.data, local_array.size);
 
-    int all_sizes[MAX_P];
-    double all_loads[MAX_P];
+    int all_sizes[p];
+    double all_loads[p];
     MPI_Allgather(&local_array.size, 1, MPI_INT,
                   all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
     MPI_Allgather(&local_cl, 1, MPI_DOUBLE,

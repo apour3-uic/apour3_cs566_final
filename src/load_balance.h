@@ -3,7 +3,6 @@
 
 #include <mpi.h>
 
-#define MAX_P         128
 #define LB_MAX_ROUNDS 10
 
 typedef struct {
