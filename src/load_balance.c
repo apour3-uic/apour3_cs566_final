@@ -197,10 +197,7 @@ static int compute_k(double my_load, int my_size,
 void synchronous_lb_linear(int rank, int p,
                            SubArray *local_array,
                            int max_rounds,
-                           TimingBreakdown *timing,
                            LoadMetrics *metrics) {
-    double t_start = MPI_Wtime();
-
     int all_sizes[MAX_P];
     double all_loads[MAX_P];
 
@@ -426,6 +423,4 @@ void synchronous_lb_linear(int rank, int p,
         printf("  Final qualitative imbalance: %.6f\n",
                metrics->final_qual_imbalance);
     }
-
-    timing->lb_time = MPI_Wtime() - t_start;
 }

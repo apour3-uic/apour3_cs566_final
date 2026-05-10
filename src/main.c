@@ -63,10 +63,7 @@ int main(int argc, char *argv[]) {
                p, enable_lb ? "with_lb" : "no_lb", rand_cl ? "rand" : "default");
 
     SubArray local_array = {NULL, 0, 0};
-    TimingBreakdown timing = {0};
     LoadMetrics metrics = {0};
-
-    double t_total_start = MPI_Wtime();
 
     srand(rank + 67); /* Random seed */
 
@@ -74,8 +71,6 @@ int main(int argc, char *argv[]) {
     /*  Phase 1: Pivot-based distribution                                */
     /* ================================================================ */
     {
-        double t_start = MPI_Wtime();
-
         if (rank == 0) {
             int num_pivots = p - 1;
             int *global_array = (int *)malloc(N * sizeof(int));
@@ -191,8 +186,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        MPI_Barrier(MPI_COMM_WORLD);
-        timing.pivot_time = MPI_Wtime() - t_start;
     }
 
     /* ================================================================ */
@@ -210,8 +203,8 @@ int main(int argc, char *argv[]) {
     metrics.initial_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
     metrics.initial_qual_imbalance  = compute_qualitative_imbalance(all_loads, p);
 
-    printf("[Rank %d] size=%d, CL=%.1f, pivot_time=%.6f sec\n",
-           rank, local_array.size, local_cl, timing.pivot_time);
+    printf("[Rank %d] size=%d, CL=%.1f\n",
+           rank, local_array.size, local_cl);
 
     /* ---- Verify PSOR after pivoting ---- */
     int local_min = 0, local_max = 0;
@@ -247,7 +240,6 @@ int main(int argc, char *argv[]) {
         }
         printf("  Total elements: %d\n", total);
         printf("  PSOR: %s\n", psor_ok ? "PASSED" : "FAILED");
-        printf("  Pivot time: %.6f sec\n", timing.pivot_time);
 
         printf("\n=== Phase 2: Initial Load Estimation ===\n");
         for (int i = 0; i < p; i++) {
@@ -269,14 +261,15 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     /*  Phase 3: Load Balancing (conditional)                            */
     /* ================================================================ */
+    /* --- sync point 1: between pivot and LB --- */
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t_lb_start = (rank == 0) ? MPI_Wtime() : 0.0;
+
     if (enable_lb) {
         if (rank == 0)
             printf("\n=== Phase 3: Load Balancing (%d rounds max) ===\n", LB_MAX_ROUNDS);
 
-        synchronous_lb_linear(rank, p, &local_array, LB_MAX_ROUNDS, &timing, &metrics);
-
-        if (rank == 0)
-            printf("  LB time: %.6f sec\n", timing.lb_time);
+        synchronous_lb_linear(rank, p, &local_array, LB_MAX_ROUNDS, &metrics);
 
         /* Re-verify PSOR after LB */
         local_min = 0; local_max = 0;
@@ -330,24 +323,30 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     /*  Phase 4: Local Sorting (insertion sort)                          */
     /* ================================================================ */
+    /* --- sync point 2: between LB and sort --- */
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t_sort_start = (rank == 0) ? MPI_Wtime() : 0.0;
+
     if (rank == 0)
         printf("\n=== Phase 4: Local Sorting (Insertion Sort) ===\n");
-    {
-        double t_start = MPI_Wtime();
-        for (int i = 1; i < local_array.size; i++) {
-            int key = local_array.data[i];
-            int j = i - 1;
-            while (j >= 0 && local_array.data[j] > key) {
-                local_array.data[j + 1] = local_array.data[j];
-                j--;
-            }
-            local_array.data[j + 1] = key;
+    for (int i = 1; i < local_array.size; i++) {
+        int key = local_array.data[i];
+        int j = i - 1;
+        while (j >= 0 && local_array.data[j] > key) {
+            local_array.data[j + 1] = local_array.data[j];
+            j--;
         }
-        timing.sort_time = MPI_Wtime() - t_start;
+        local_array.data[j + 1] = key;
     }
 
-    printf("[Rank %d] sort_time=%.6f sec, n=%d\n",
-           rank, timing.sort_time, local_array.size);
+    /* --- sync point 3: between sort and output --- */
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t_after_sort = (rank == 0) ? MPI_Wtime() : 0.0;
+
+    double lb_time   = t_sort_start - t_lb_start;
+    double sort_time = t_after_sort - t_sort_start;
+
+    printf("[Rank %d] n=%d\n", rank, local_array.size);
 
     /* ================================================================ */
     /*  Phase 5: Final PSOR + sortedness verification                    */
@@ -416,8 +415,6 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     /*  Phase 6: Output (token-passed file write) + statistics           */
     /* ================================================================ */
-    double t_io_start = MPI_Wtime();
-
     /*
      * Derive a tag from the input filename so output files are unique per run.
      * e.g. "Inputs/A_vector_100000_8_2.txt" -> tag "100000_8_2"
@@ -482,92 +479,37 @@ int main(int argc, char *argv[]) {
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    timing.io_time    = MPI_Wtime() - t_io_start;
-    timing.total_time = MPI_Wtime() - t_total_start;
-
-    if (enable_lb) {
-        timing.parallel_time = timing.pivot_time + timing.lb_time + timing.sort_time;
-    } else {
-        timing.parallel_time = timing.pivot_time + timing.sort_time;
-    }
-
-    if (p == 1) {
-        timing.sequential_baseline = timing.sort_time;
-    }
-
     char stat_file[256];
     snprintf(stat_file, sizeof(stat_file), "outputs/stats_%s%s_%s.txt",
              enable_lb ? "with_lb" : "no_lb",
              rand_cl ? "_rand" : "",
              tag);
 
-    /* ---- Write statistics: reduce timings to rank 0, then dump ---- */
-    {
-        double max_pivot_time, max_sort_time, max_lb_time, max_total_time;
-        MPI_Reduce(&timing.pivot_time, &max_pivot_time, 1, MPI_DOUBLE,
-                   MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&timing.sort_time,  &max_sort_time,  1, MPI_DOUBLE,
-                   MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&timing.lb_time,    &max_lb_time,    1, MPI_DOUBLE,
-                   MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&timing.total_time, &max_total_time, 1, MPI_DOUBLE,
-                   MPI_MAX, 0, MPI_COMM_WORLD);
-
-        if (rank == 0) {
-            double parallel_time = enable_lb
-                ? (max_pivot_time + max_lb_time + max_sort_time)
-                : (max_pivot_time + max_sort_time);
-            timing.parallel_time = parallel_time;
-
-            FILE *fp = fopen(stat_file, "w");
-            if (!fp) {
-                fprintf(stderr, "Error: cannot open stats file %s\n", stat_file);
-            } else {
-                fprintf(fp, "=== Parallel Sort Statistics ===\n");
-                fprintf(fp, "Processors: %d\n", p);
-                fprintf(fp, "Mode: %s\n", enable_lb ? "with_lb" : "no_lb");
-                fprintf(fp, "\n--- Timing (max across ranks) ---\n");
-                fprintf(fp, "Pivot time:    %.6f sec\n", max_pivot_time);
-                fprintf(fp, "Sort time:     %.6f sec\n", max_sort_time);
-                fprintf(fp, "LB time:       %.6f sec\n", max_lb_time);
-                fprintf(fp, "IO time:       %.6f sec\n", timing.io_time);
-                fprintf(fp, "Parallel time: %.6f sec\n", parallel_time);
-                if (timing.sequential_baseline > 0) {
-                    double speedup    = timing.sequential_baseline / parallel_time;
-                    double efficiency = speedup / p;
-                    fprintf(fp, "Sequential baseline: %.6f sec\n", timing.sequential_baseline);
-                    fprintf(fp, "Speedup:       %.4f\n", speedup);
-                    fprintf(fp, "Efficiency:    %.4f\n", efficiency);
-                }
-
-                fprintf(fp, "\n--- Imbalance Metrics ---\n");
-                fprintf(fp, "Initial quantitative: %.6f\n", metrics.initial_quant_imbalance);
-                fprintf(fp, "Initial qualitative:  %.6f\n", metrics.initial_qual_imbalance);
-                fprintf(fp, "Final quantitative:   %.6f\n", metrics.final_quant_imbalance);
-                fprintf(fp, "Final qualitative:    %.6f\n", metrics.final_qual_imbalance);
-
-                fclose(fp);
-            }
-
-            printf("\n=== Final Statistics ===\n");
-            printf("  Parallel time (%s): %.6f sec\n",
-                   enable_lb ? "with LB" : "no LB", parallel_time);
-            printf("  Pivot: %.6f, Sort: %.6f, LB: %.6f\n",
-                   max_pivot_time, max_sort_time, max_lb_time);
-            if (timing.sequential_baseline > 0) {
-                double speedup    = timing.sequential_baseline / parallel_time;
-                double efficiency = speedup / p;
-                printf("  Sequential baseline: %.6f sec\n", timing.sequential_baseline);
-                printf("  Speedup: %.4f, Efficiency: %.4f\n", speedup, efficiency);
-            }
-        }
-    }
-
     if (rank == 0) {
+        FILE *fp = fopen(stat_file, "w");
+        if (!fp) {
+            fprintf(stderr, "Error: cannot open stats file %s\n", stat_file);
+        } else {
+            fprintf(fp, "=== Parallel Sort Statistics ===\n");
+            fprintf(fp, "Processors: %d\n", p);
+            fprintf(fp, "Mode: %s\n", enable_lb ? "with_lb" : "no_lb");
+            fprintf(fp, "\n--- Timing ---\n");
+            fprintf(fp, "LB time:    %.6f sec\n", lb_time);
+            fprintf(fp, "Sort time:  %.6f sec\n", sort_time);
+            fprintf(fp, "\n--- Imbalance Metrics ---\n");
+            fprintf(fp, "Initial quantitative: %.6f\n", metrics.initial_quant_imbalance);
+            fprintf(fp, "Initial qualitative:  %.6f\n", metrics.initial_qual_imbalance);
+            fprintf(fp, "Final quantitative:   %.6f\n", metrics.final_quant_imbalance);
+            fprintf(fp, "Final qualitative:    %.6f\n", metrics.final_qual_imbalance);
+            fclose(fp);
+        }
+
+        printf("\n=== Final Statistics ===\n");
+        printf("  LB time:   %.6f sec\n", lb_time);
+        printf("  Sort time: %.6f sec\n", sort_time);
         printf("\n=== Output Written ===\n");
         printf("  Sorted array: %s\n", output_file);
         printf("  Statistics:   %s\n", stat_file);
-        printf("  Total wall-clock: %.6f sec\n", timing.total_time);
     }
 
     subarray_free(&local_array);

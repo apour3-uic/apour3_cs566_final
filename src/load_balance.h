@@ -13,16 +13,6 @@ typedef struct {
 } SubArray;
 
 typedef struct {
-    double pivot_time;
-    double sort_time;
-    double lb_time;
-    double io_time;
-    double total_time;
-    double sequential_baseline;
-    double parallel_time;  /* this run's time: no_lb or with_lb */
-} TimingBreakdown;
-
-typedef struct {
     /* Imbalance after pivoting, before LB */
     double initial_quant_imbalance;   /* StdDev(n(i)) / (N/P) */
     double initial_qual_imbalance;    /* StdDev(CL(A(i))) / avg(CL(A(i))) */
@@ -31,9 +21,6 @@ typedef struct {
     double final_quant_imbalance;
     double final_qual_imbalance;
 
-    /* Performance */
-    double speedup;
-    double efficiency;
 } LoadMetrics;
 
 /*
@@ -89,13 +76,11 @@ double compute_qualitative_imbalance(double *loads, int p);
  * max_rounds: maximum number of LB iterations.
  * Early termination if qualitative imbalance drops below LB_IMBALANCE_THRESH.
  *
- * Records lb_time in timing.
  * Updates metrics->final_quant_imbalance and final_qual_imbalance.
  */
 void synchronous_lb_linear(int rank, int p,
                            SubArray *local_array,
                            int max_rounds,
-                           TimingBreakdown *timing,
                            LoadMetrics *metrics);
 
 /*
