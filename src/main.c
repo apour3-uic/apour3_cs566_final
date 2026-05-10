@@ -58,10 +58,6 @@ int main(int argc, char *argv[]) {
 
     estimate_cl_func = rand_cl ? estimate_cl_rand : estimate_cl;
 
-    if (rank == 0)
-        printf("=== Parallel Sort: P=%d, mode=%s, cl=%s ===\n",
-               p, enable_lb ? "with_lb" : "no_lb", rand_cl ? "rand" : "default");
-
     SubArray local_array = {NULL, 0, 0};
     LoadMetrics metrics = {0};
 
@@ -124,8 +120,6 @@ int main(int argc, char *argv[]) {
                 fclose(fp);
             }
 
-            fprintf(stdout, "[Rank 0] Read %d elements, %d pivots\n", N, num_pivots);
-
             /* Partition global_array into p buckets:
              *   bucket b = { x : pivots[b-1] < x <= pivots[b] }
              *   bucket 0 = { x <= pivots[0] }; bucket p-1 = { x > pivots[p-2] } */
@@ -149,11 +143,6 @@ int main(int argc, char *argv[]) {
                 buckets[b][offsets[b]++] = global_array[i];
             }
             free(offsets);
-
-            fprintf(stdout, "[Rank 0] Bucket sizes after pivoting:");
-            for (int i = 0; i < p; i++)
-                fprintf(stdout, " %d", bucket_sizes[i]);
-            fprintf(stdout, "\n");
 
             /* Send buckets 1..p-1, keep bucket 0 locally */
             for (int dest = 1; dest < p; dest++) {
@@ -203,9 +192,6 @@ int main(int argc, char *argv[]) {
     metrics.initial_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
     metrics.initial_qual_imbalance  = compute_qualitative_imbalance(all_loads, p);
 
-    printf("[Rank %d] size=%d, CL=%.1f\n",
-           rank, local_array.size, local_cl);
-
     /* ---- Verify PSOR after pivoting ---- */
     int local_min = 0, local_max = 0;
     if (local_array.size > 0) {
@@ -223,13 +209,6 @@ int main(int argc, char *argv[]) {
 
     int psor_ok = 1;
     if (rank == 0) {
-        printf("\n=== Phase 1: PSOR Verification ===\n");
-        int total = 0;
-        for (int i = 0; i < p; i++) {
-            printf("  Proc %d: size=%d, min=%d, max=%d\n",
-                   i, all_sizes[i], all_mins[i], all_maxs[i]);
-            total += all_sizes[i];
-        }
         for (int i = 0; i < p - 1; i++) {
             if (all_maxs[i] > all_mins[i + 1]) {
                 fprintf(stderr,
@@ -238,18 +217,6 @@ int main(int argc, char *argv[]) {
                 psor_ok = 0;
             }
         }
-        printf("  Total elements: %d\n", total);
-        printf("  PSOR: %s\n", psor_ok ? "PASSED" : "FAILED");
-
-        printf("\n=== Phase 2: Initial Load Estimation ===\n");
-        for (int i = 0; i < p; i++) {
-            printf("  Proc %d: n(i)=%d, CL(A(i))=%.1f\n",
-                   i, all_sizes[i], all_loads[i]);
-        }
-        printf("  Quantitative imbalance (StdDev(n)/avg(n)): %.6f\n",
-               metrics.initial_quant_imbalance);
-        printf("  Qualitative imbalance (StdDev(CL)/avg(CL)): %.6f\n",
-               metrics.initial_qual_imbalance);
     }
     MPI_Bcast(&psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (!psor_ok) {
@@ -266,9 +233,6 @@ int main(int argc, char *argv[]) {
     double t_lb_start = (rank == 0) ? MPI_Wtime() : 0.0;
 
     if (enable_lb) {
-        if (rank == 0)
-            printf("\n=== Phase 3: Load Balancing (%d rounds max) ===\n", LB_MAX_ROUNDS);
-
         synchronous_lb_linear(rank, p, &local_array, LB_MAX_ROUNDS, &metrics);
 
         /* Re-verify PSOR after LB */
@@ -288,13 +252,6 @@ int main(int argc, char *argv[]) {
 
         int post_lb_psor_ok = 1;
         if (rank == 0) {
-            printf("\n=== Post-LB PSOR Verification ===\n");
-            int total = 0;
-            for (int i = 0; i < p; i++) {
-                printf("  Proc %d: size=%d, min=%d, max=%d\n",
-                       i, all_sizes[i], all_mins[i], all_maxs[i]);
-                total += all_sizes[i];
-            }
             for (int i = 0; i < p - 1; i++) {
                 if (all_maxs[i] > all_mins[i + 1]) {
                     fprintf(stderr,
@@ -303,8 +260,6 @@ int main(int argc, char *argv[]) {
                     post_lb_psor_ok = 0;
                 }
             }
-            printf("  Total elements: %d\n", total);
-            printf("  PSOR after LB: %s\n", post_lb_psor_ok ? "PASSED" : "FAILED");
         }
         MPI_Bcast(&post_lb_psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
         if (!post_lb_psor_ok) {
@@ -313,8 +268,6 @@ int main(int argc, char *argv[]) {
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
     } else {
-        if (rank == 0)
-            printf("\n=== Phase 3: Load Balancing SKIPPED (no_lb mode) ===\n");
         /* Set final imbalance = initial (no LB performed) */
         metrics.final_quant_imbalance = metrics.initial_quant_imbalance;
         metrics.final_qual_imbalance  = metrics.initial_qual_imbalance;
@@ -327,8 +280,6 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     double t_sort_start = (rank == 0) ? MPI_Wtime() : 0.0;
 
-    if (rank == 0)
-        printf("\n=== Phase 4: Local Sorting (Insertion Sort) ===\n");
     for (int i = 1; i < local_array.size; i++) {
         int key = local_array.data[i];
         int j = i - 1;
@@ -345,8 +296,6 @@ int main(int argc, char *argv[]) {
 
     double lb_time   = t_sort_start - t_lb_start;
     double sort_time = t_after_sort - t_sort_start;
-
-    printf("[Rank %d] n=%d\n", rank, local_array.size);
 
     /* ================================================================ */
     /*  Phase 5: Final PSOR + sortedness verification                    */
@@ -384,13 +333,6 @@ int main(int argc, char *argv[]) {
 
         int final_psor_ok = 1;
         if (rank == 0) {
-            printf("\n=== Phase 5: Final Verification (Post-Sort) ===\n");
-            int total = 0;
-            for (int i = 0; i < p; i++) {
-                printf("  Proc %d: size=%d, min=%d, max=%d\n",
-                       i, final_sizes[i], final_mins[i], final_maxs[i]);
-                total += final_sizes[i];
-            }
             for (int i = 0; i < p - 1; i++) {
                 if (final_maxs[i] > final_mins[i + 1]) {
                     fprintf(stderr,
@@ -399,9 +341,6 @@ int main(int argc, char *argv[]) {
                     final_psor_ok = 0;
                 }
             }
-            printf("  Total elements: %d\n", total);
-            printf("  PSOR after sorting: %s\n", final_psor_ok ? "PASSED" : "FAILED");
-            printf("  Local sortedness: %s\n", global_sorted ? "PASSED" : "FAILED");
         }
         MPI_Bcast(&final_psor_ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -489,27 +428,27 @@ int main(int argc, char *argv[]) {
         FILE *fp = fopen(stat_file, "w");
         if (!fp) {
             fprintf(stderr, "Error: cannot open stats file %s\n", stat_file);
-        } else {
-            fprintf(fp, "=== Parallel Sort Statistics ===\n");
-            fprintf(fp, "Processors: %d\n", p);
-            fprintf(fp, "Mode: %s\n", enable_lb ? "with_lb" : "no_lb");
-            fprintf(fp, "\n--- Timing ---\n");
-            fprintf(fp, "LB time:    %.6f sec\n", lb_time);
-            fprintf(fp, "Sort time:  %.6f sec\n", sort_time);
-            fprintf(fp, "\n--- Imbalance Metrics ---\n");
-            fprintf(fp, "Initial quantitative: %.6f\n", metrics.initial_quant_imbalance);
-            fprintf(fp, "Initial qualitative:  %.6f\n", metrics.initial_qual_imbalance);
-            fprintf(fp, "Final quantitative:   %.6f\n", metrics.final_quant_imbalance);
-            fprintf(fp, "Final qualitative:    %.6f\n", metrics.final_qual_imbalance);
-            fclose(fp);
+            MPI_Abort(MPI_COMM_WORLD, 1);
         }
+        fprintf(fp, "=== Parallel Sort Statistics ===\n");
+        fprintf(fp, "Processors: %d\n", p);
+        fprintf(fp, "Mode: %s\n", enable_lb ? "with_lb" : "no_lb");
+        fprintf(fp, "\n--- Timing ---\n");
+        fprintf(fp, "LB time:    %.6f sec\n", lb_time);
+        fprintf(fp, "Sort time:  %.6f sec\n", sort_time);
+        fprintf(fp, "\n--- Imbalance Metrics ---\n");
+        fprintf(fp, "Initial quantitative: %.6f\n", metrics.initial_quant_imbalance);
+        fprintf(fp, "Initial qualitative:  %.6f\n", metrics.initial_qual_imbalance);
+        fprintf(fp, "Final quantitative:   %.6f\n", metrics.final_quant_imbalance);
+        fprintf(fp, "Final qualitative:    %.6f\n", metrics.final_qual_imbalance);
+        fclose(fp);
 
-        printf("\n=== Final Statistics ===\n");
-        printf("  LB time:   %.6f sec\n", lb_time);
-        printf("  Sort time: %.6f sec\n", sort_time);
-        printf("\n=== Output Written ===\n");
-        printf("  Sorted array: %s\n", output_file);
-        printf("  Statistics:   %s\n", stat_file);
+        printf("LB time:    %.6f sec\n", lb_time);
+        printf("Sort time:  %.6f sec\n", sort_time);
+        printf("Initial quantitative imbalance: %.6f\n", metrics.initial_quant_imbalance);
+        printf("Initial qualitative imbalance:  %.6f\n", metrics.initial_qual_imbalance);
+        printf("Final quantitative imbalance:   %.6f\n", metrics.final_quant_imbalance);
+        printf("Final qualitative imbalance:    %.6f\n", metrics.final_qual_imbalance);
     }
 
     subarray_free(&local_array);

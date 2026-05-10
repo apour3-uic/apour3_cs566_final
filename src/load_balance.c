@@ -212,18 +212,7 @@ void synchronous_lb_linear(int rank, int p,
 
         /* Check early termination */
         double qual_imb = compute_qualitative_imbalance(all_loads, p);
-        if (rank == 0) {
-            printf("  [LB Round %d] qual_imbalance=%.6f", round + 1, qual_imb);
-            for (int i = 0; i < p; i++)
-                printf(" n(%d)=%d", i, all_sizes[i]);
-            printf("\n");
-        }
-        if (qual_imb < LB_IMBALANCE_THRESH) {
-            if (rank == 0)
-                printf("  [LB] Early termination: imbalance %.6f < threshold %.1f\n",
-                       qual_imb, LB_IMBALANCE_THRESH);
-            break;
-        }
+        if (qual_imb < LB_IMBALANCE_THRESH) break;
 
         /* Step 2: Compute k for left and right neighbors */
         int k_left = 0, k_right = 0;
@@ -412,15 +401,4 @@ void synchronous_lb_linear(int rank, int p,
 
     metrics->final_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
     metrics->final_qual_imbalance = compute_qualitative_imbalance(all_loads, p);
-
-    if (rank == 0) {
-        printf("\n=== Phase 3: Post-LB State ===\n");
-        for (int i = 0; i < p; i++)
-            printf("  Proc %d: n(i)=%d, CL(A(i))=%.1f\n",
-                   i, all_sizes[i], all_loads[i]);
-        printf("  Final quantitative imbalance: %.6f\n",
-               metrics->final_quant_imbalance);
-        printf("  Final qualitative imbalance: %.6f\n",
-               metrics->final_qual_imbalance);
-    }
 }
