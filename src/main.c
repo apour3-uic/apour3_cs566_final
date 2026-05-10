@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         printf("=== Parallel Sort: P=%d, mode=%s, cl=%s ===\n",
                p, enable_lb ? "with_lb" : "no_lb", rand_cl ? "rand" : "default");
 
-    SubArray local_array = {NULL, 0, 0, 0.0, rank};
+    SubArray local_array = {NULL, 0, 0};
     TimingBreakdown timing = {0};
     LoadMetrics metrics = {0};
 
@@ -198,20 +198,20 @@ int main(int argc, char *argv[]) {
     /* ================================================================ */
     /*  Phase 2: Initial Load Estimation                                 */
     /* ================================================================ */
-    local_array.comp_load = estimate_cl_func(local_array.data, local_array.size);
+    double local_cl = estimate_cl_func(local_array.data, local_array.size);
 
     int all_sizes[MAX_P];
     double all_loads[MAX_P];
     MPI_Allgather(&local_array.size, 1, MPI_INT,
                   all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Allgather(&local_array.comp_load, 1, MPI_DOUBLE,
+    MPI_Allgather(&local_cl, 1, MPI_DOUBLE,
                   all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
 
     metrics.initial_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
     metrics.initial_qual_imbalance  = compute_qualitative_imbalance(all_loads, p);
 
     printf("[Rank %d] size=%d, CL=%.1f, pivot_time=%.6f sec\n",
-           rank, local_array.size, local_array.comp_load, timing.pivot_time);
+           rank, local_array.size, local_cl, timing.pivot_time);
 
     /* ---- Verify PSOR after pivoting ---- */
     int local_min = 0, local_max = 0;

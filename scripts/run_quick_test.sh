@@ -13,12 +13,12 @@ mkdir -p outputs
 
 echo "=== Quick test: P=8, no_lb, skewed pivots ==="
 srun --mpi=pmix -n 8 ./parallel_sort \
-    A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt --mode=no_lb
+    A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt 100000 --mode=no_lb
 
 echo ""
 echo "=== Quick test: P=8, with_lb, skewed pivots ==="
 srun --mpi=pmix -n 8 ./parallel_sort \
-    A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt --mode=with_lb
+    A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt 100000 --mode=with_lb
 
 echo ""
 echo "Done. Check outputs/ for sorted arrays and stats."

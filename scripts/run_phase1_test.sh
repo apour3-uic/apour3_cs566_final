@@ -20,9 +20,9 @@ fi
 
 
 echo "Phase 1 Test: A_vector_100000_8_2 (skewed pivots)"
-srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt
+srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt 100000
 
 echo "Phase 1 Test: A_vector_100000_8_8 (varied pivots)"
-srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_8.txt pivot_vector_100000_8_8.txt
+srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_8.txt pivot_vector_100000_8_8.txt 100000
 
 echo "Job completed at $(date)"

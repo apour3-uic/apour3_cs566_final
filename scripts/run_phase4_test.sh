@@ -45,7 +45,7 @@ for N in $N_VALUES; do
                 echo "Run: N=$N P=$P s=$s mode=$mode"
                 echo "============================================"
                 srun --mpi=pmix -n ${P} ./parallel_sort \
-                    "$AFILE" "$PFILE" --mode=${mode}
+                    "$AFILE" "$PFILE" ${N} --mode=${mode}
             done
         done
     done

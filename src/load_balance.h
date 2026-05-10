@@ -10,8 +10,6 @@ typedef struct {
     int *data;        /* elements (unsorted during Phases 1-3, sorted after Phase 4) */
     int size;         /* current number of elements n(i) */
     int capacity;     /* allocated memory */
-    double comp_load; /* CL(A): estimated insertion sort computational load */
-    int rank;         /* owning processor rank */
 } SubArray;
 
 typedef struct {

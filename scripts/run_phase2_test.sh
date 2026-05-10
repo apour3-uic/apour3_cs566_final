@@ -21,11 +21,11 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Phase 1+2 Test: A_vector_100000_8_2 (skewed pivots)"
-srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt
+srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_2.txt pivot_vector_100000_8_2.txt 100000
 
 echo ""
 echo "Phase 1+2 Test: A_vector_100000_8_8 (varied pivots)"
-srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_8.txt pivot_vector_100000_8_8.txt
+srun --mpi=pmix -n 8 ./parallel_sort A_vector_100000_8_8.txt pivot_vector_100000_8_8.txt 100000
 
 echo ""
 echo "Job completed at $(date)"

@@ -206,11 +206,11 @@ void synchronous_lb_linear(int rank, int p,
 
     for (int round = 0; round < max_rounds; round++) {
         /* Step 1: Gather global load info */
-        local_array->comp_load = estimate_cl_func(local_array->data, local_array->size);
+        double local_cl = estimate_cl_func(local_array->data, local_array->size);
 
         MPI_Allgather(&local_array->size, 1, MPI_INT,
                       all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
-        MPI_Allgather(&local_array->comp_load, 1, MPI_DOUBLE,
+        MPI_Allgather(&local_cl, 1, MPI_DOUBLE,
                       all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
 
         /* Check early termination */
@@ -336,9 +336,9 @@ void synchronous_lb_linear(int rank, int p,
             /* I'm odd, partner is rank+1 */
             int partner = rank + 1;
             /* Recompute k_right since sizes changed in Phase A */
-            local_array->comp_load = estimate_cl_func(local_array->data, local_array->size);
+            double cl = estimate_cl_func(local_array->data, local_array->size);
             double partner_load = all_loads[partner]; /* approximate */
-            int kr = compute_k(local_array->comp_load, local_array->size,
+            int kr = compute_k(cl, local_array->size,
                                partner_load, local_array->size / 4 > 0 ? local_array->size / 4 : 1);
             if (kr > 0) {
                 select_k_largest(local_array->data, local_array->size, kr);
@@ -385,9 +385,9 @@ void synchronous_lb_linear(int rank, int p,
                          MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
             /* Send k smallest to left */
-            local_array->comp_load = estimate_cl_func(local_array->data, local_array->size);
+            double cl = estimate_cl_func(local_array->data, local_array->size);
             double partner_load = all_loads[partner]; /* approximate */
-            int kl = compute_k(local_array->comp_load, local_array->size,
+            int kl = compute_k(cl, local_array->size,
                                partner_load, local_array->size / 4 > 0 ? local_array->size / 4 : 1);
             if (kl > 0) {
                 select_k_smallest(local_array->data, local_array->size, kl);
@@ -407,10 +407,10 @@ void synchronous_lb_linear(int rank, int p,
     }
 
     /* Final imbalance measurement after LB, before sorting */
-    local_array->comp_load = estimate_cl_func(local_array->data, local_array->size);
+    double final_cl = estimate_cl_func(local_array->data, local_array->size);
     MPI_Allgather(&local_array->size, 1, MPI_INT,
                   all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Allgather(&local_array->comp_load, 1, MPI_DOUBLE,
+    MPI_Allgather(&final_cl, 1, MPI_DOUBLE,
                   all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
 
     metrics->final_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);

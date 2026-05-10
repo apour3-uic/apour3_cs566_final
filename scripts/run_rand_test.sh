@@ -21,15 +21,15 @@ fi
 echo "============================================"
 echo "Deterministic = Random Test: A_vector_100000_8_2 (skewed pivots)"
 echo "============================================"
-srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_2.txt Inputs/pivot_vector_100000_8_2.txt --mode=with_lb
-srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_2.txt Inputs/pivot_vector_100000_8_2.txt --mode=with_lb --cl=rand
+srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_2.txt Inputs/pivot_vector_100000_8_2.txt 100000 --mode=with_lb
+srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_2.txt Inputs/pivot_vector_100000_8_2.txt 100000 --mode=with_lb --cl=rand
 
 echo ""
 echo "============================================"
 echo "Random + Deterministic Test: A_vector_100000_8_8 (varied pivots)"
 echo "============================================"
-srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_8.txt Inputs/pivot_vector_100000_8_8.txt --mode=with_lb
-srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_8.txt Inputs/pivot_vector_100000_8_8.txt --mode=with_lb --cl=rand
+srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_8.txt Inputs/pivot_vector_100000_8_8.txt 100000 --mode=with_lb
+srun --mpi=pmix -n 8 ./parallel_sort Inputs/A_vector_100000_8_8.txt Inputs/pivot_vector_100000_8_8.txt 100000 --mode=with_lb --cl=rand
 
 echo ""
 echo "Job completed at $(date)"
