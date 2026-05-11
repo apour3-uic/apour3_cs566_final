@@ -1,0 +1,757 @@
+rm -f parallel_sort
+mpicc -O2 -Isrc -o parallel_sort src/main.c src/load_balance.c -lm
+============================================
+  Full Experiment Grid
+  P=1 (baseline), then P=8..128 x s=2/8 x {no_lb, with_lb, with_lb+rand}
+  N=100000/1000000
+============================================
+
+============================================
+Sequential baseline: N=100000 P=1
+============================================
+LB time:    0.000001 sec
+Sort time:  2.082978 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.000000
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.000000
+
+============================================
+Sequential baseline: N=1000000 P=1
+============================================
+LB time:    0.000000 sec
+Sort time:  143.242583 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.000000
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.000000
+
+============================================
+Run: N=100000 P=8 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  0.525187 sec
+Initial quantitative imbalance: 1.291120
+Initial qualitative imbalance:  1.948194
+Final quantitative imbalance:   1.291120
+Final qualitative imbalance:    1.948194
+
+============================================
+Run: N=100000 P=8 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.006771 sec
+Sort time:  0.036332 sec
+Initial quantitative imbalance: 1.291120
+Initial qualitative imbalance:  1.948194
+Final quantitative imbalance:   0.077037
+Final qualitative imbalance:    0.149597
+
+============================================
+Run: N=100000 P=8 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.039200 sec
+Sort time:  0.054054 sec
+Initial quantitative imbalance: 1.291120
+Initial qualitative imbalance:  1.952756
+Final quantitative imbalance:   0.742963
+Final qualitative imbalance:    1.170552
+
+============================================
+Run: N=100000 P=8 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  0.033313 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.004673
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.004673
+
+============================================
+Run: N=100000 P=8 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.000126 sec
+Sort time:  0.033313 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.004673
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.004673
+
+============================================
+Run: N=100000 P=8 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.000988 sec
+Sort time:  0.033307 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.008329
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.009260
+
+============================================
+Run: N=100000 P=16 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  0.525930 sec
+Initial quantitative imbalance: 2.081665
+Initial qualitative imbalance:  2.931442
+Final quantitative imbalance:   2.081665
+Final qualitative imbalance:    2.931442
+
+============================================
+Run: N=100000 P=16 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.007930 sec
+Sort time:  0.013687 sec
+Initial quantitative imbalance: 2.081665
+Initial qualitative imbalance:  2.931442
+Final quantitative imbalance:   0.577982
+Final qualitative imbalance:    0.824986
+
+============================================
+Run: N=100000 P=16 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.032008 sec
+Sort time:  0.036811 sec
+Initial quantitative imbalance: 2.081665
+Initial qualitative imbalance:  2.937442
+Final quantitative imbalance:   0.709253
+Final qualitative imbalance:    1.701596
+
+============================================
+Run: N=100000 P=16 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  0.033291 sec
+Initial quantitative imbalance: 0.420524
+Initial qualitative imbalance:  0.898996
+Final quantitative imbalance:   0.420524
+Final qualitative imbalance:    0.898996
+
+============================================
+Run: N=100000 P=16 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.003010 sec
+Sort time:  0.006515 sec
+Initial quantitative imbalance: 0.420524
+Initial qualitative imbalance:  0.898996
+Final quantitative imbalance:   0.086124
+Final qualitative imbalance:    0.171065
+
+============================================
+Run: N=100000 P=16 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.017363 sec
+Sort time:  0.035742 sec
+Initial quantitative imbalance: 0.420524
+Initial qualitative imbalance:  0.891886
+Final quantitative imbalance:   0.725793
+Final qualitative imbalance:    1.574403
+
+============================================
+Run: N=100000 P=32 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000003 sec
+Sort time:  0.526101 sec
+Initial quantitative imbalance: 3.109125
+Initial qualitative imbalance:  4.264587
+Final quantitative imbalance:   3.109125
+Final qualitative imbalance:    4.264587
+
+============================================
+Run: N=100000 P=32 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.008436 sec
+Sort time:  0.013709 sec
+Initial quantitative imbalance: 3.109125
+Initial qualitative imbalance:  4.264587
+Final quantitative imbalance:   1.290724
+Final qualitative imbalance:    1.538096
+
+============================================
+Run: N=100000 P=32 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.032079 sec
+Sort time:  0.036921 sec
+Initial quantitative imbalance: 3.109125
+Initial qualitative imbalance:  4.272836
+Final quantitative imbalance:   1.415041
+Final qualitative imbalance:    2.608741
+
+============================================
+Run: N=100000 P=32 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  0.033314 sec
+Initial quantitative imbalance: 1.065973
+Initial qualitative imbalance:  1.803180
+Final quantitative imbalance:   1.065973
+Final qualitative imbalance:    1.803180
+
+============================================
+Run: N=100000 P=32 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.003474 sec
+Sort time:  0.005629 sec
+Initial quantitative imbalance: 1.065973
+Initial qualitative imbalance:  1.803180
+Final quantitative imbalance:   0.656186
+Final qualitative imbalance:    1.029458
+
+============================================
+Run: N=100000 P=32 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.014437 sec
+Sort time:  0.011939 sec
+Initial quantitative imbalance: 1.065973
+Initial qualitative imbalance:  1.792335
+Final quantitative imbalance:   0.759653
+Final qualitative imbalance:    1.813745
+
+============================================
+Run: N=100000 P=64 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000011 sec
+Sort time:  0.526767 sec
+Initial quantitative imbalance: 4.509248
+Initial qualitative imbalance:  6.113381
+Final quantitative imbalance:   4.509248
+Final qualitative imbalance:    6.113381
+
+============================================
+Run: N=100000 P=64 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.008929 sec
+Sort time:  0.013581 sec
+Initial quantitative imbalance: 4.509248
+Initial qualitative imbalance:  6.113381
+Final quantitative imbalance:   2.080340
+Final qualitative imbalance:    2.393373
+
+============================================
+Run: N=100000 P=64 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.033982 sec
+Sort time:  0.035750 sec
+Initial quantitative imbalance: 4.509248
+Initial qualitative imbalance:  6.124888
+Final quantitative imbalance:   2.223710
+Final qualitative imbalance:    3.792671
+
+============================================
+Run: N=100000 P=64 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000012 sec
+Sort time:  0.033367 sec
+Initial quantitative imbalance: 1.807327
+Initial qualitative imbalance:  2.743516
+Final quantitative imbalance:   1.807327
+Final qualitative imbalance:    2.743516
+
+============================================
+Run: N=100000 P=64 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.003754 sec
+Sort time:  0.005640 sec
+Initial quantitative imbalance: 1.807327
+Initial qualitative imbalance:  2.743516
+Final quantitative imbalance:   1.356318
+Final qualitative imbalance:    1.782762
+
+============================================
+Run: N=100000 P=64 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.015091 sec
+Sort time:  0.011979 sec
+Initial quantitative imbalance: 1.807327
+Initial qualitative imbalance:  2.729719
+Final quantitative imbalance:   1.455694
+Final qualitative imbalance:    2.803533
+
+============================================
+Run: N=100000 P=128 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000013 sec
+Sort time:  0.526985 sec
+Initial quantitative imbalance: 6.454964
+Initial qualitative imbalance:  8.703279
+Final quantitative imbalance:   6.454964
+Final qualitative imbalance:    8.703279
+
+============================================
+Run: N=100000 P=128 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.010533 sec
+Sort time:  0.016355 sec
+Initial quantitative imbalance: 6.454964
+Initial qualitative imbalance:  8.703279
+Final quantitative imbalance:   3.107839
+Final qualitative imbalance:    3.533689
+
+============================================
+Run: N=100000 P=128 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.032527 sec
+Sort time:  0.033529 sec
+Initial quantitative imbalance: 6.454964
+Initial qualitative imbalance:  8.719446
+Final quantitative imbalance:   3.215378
+Final qualitative imbalance:    5.851725
+
+============================================
+Run: N=100000 P=128 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000012 sec
+Sort time:  0.033523 sec
+Initial quantitative imbalance: 2.744613
+Initial qualitative imbalance:  4.006693
+Final quantitative imbalance:   2.744613
+Final qualitative imbalance:    4.006693
+
+============================================
+Run: N=100000 P=128 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.004555 sec
+Sort time:  0.005652 sec
+Initial quantitative imbalance: 2.744613
+Initial qualitative imbalance:  4.006693
+Final quantitative imbalance:   2.163137
+Final qualitative imbalance:    2.712270
+
+============================================
+Run: N=100000 P=128 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.014516 sec
+Sort time:  0.012392 sec
+Initial quantitative imbalance: 2.744613
+Initial qualitative imbalance:  3.987798
+Final quantitative imbalance:   2.288680
+Final qualitative imbalance:    4.089105
+
+============================================
+Run: N=1000000 P=8 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000016 sec
+Sort time:  36.417432 sec
+Initial quantitative imbalance: 1.291121
+Initial qualitative imbalance:  1.948586
+Final quantitative imbalance:   1.291121
+Final qualitative imbalance:    1.948586
+
+============================================
+Run: N=1000000 P=8 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.086782 sec
+Sort time:  3.087087 sec
+Initial quantitative imbalance: 1.291121
+Initial qualitative imbalance:  1.948586
+Final quantitative imbalance:   0.075534
+Final qualitative imbalance:    0.148784
+
+============================================
+Run: N=1000000 P=8 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.485888 sec
+Sort time:  9.651995 sec
+Initial quantitative imbalance: 1.291121
+Initial qualitative imbalance:  1.949725
+Final quantitative imbalance:   0.761472
+Final qualitative imbalance:    1.699637
+
+============================================
+Run: N=1000000 P=8 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000002 sec
+Sort time:  2.915062 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.001741
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.001741
+
+============================================
+Run: N=1000000 P=8 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.000447 sec
+Sort time:  2.926364 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.001741
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.001741
+
+============================================
+Run: N=1000000 P=8 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.009930 sec
+Sort time:  2.829131 sec
+Initial quantitative imbalance: 0.000000
+Initial qualitative imbalance:  0.002837
+Final quantitative imbalance:   0.000000
+Final qualitative imbalance:    0.003951
+
+============================================
+Run: N=1000000 P=16 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000006 sec
+Sort time:  36.695774 sec
+Initial quantitative imbalance: 2.081666
+Initial qualitative imbalance:  2.931952
+Final quantitative imbalance:   2.081666
+Final qualitative imbalance:    2.931952
+
+============================================
+Run: N=1000000 P=16 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.096984 sec
+Sort time:  1.433128 sec
+Initial quantitative imbalance: 2.081666
+Initial qualitative imbalance:  2.931952
+Final quantitative imbalance:   0.578971
+Final qualitative imbalance:    0.818023
+
+============================================
+Run: N=1000000 P=16 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.402122 sec
+Sort time:  2.944869 sec
+Initial quantitative imbalance: 2.081666
+Initial qualitative imbalance:  2.933466
+Final quantitative imbalance:   0.660431
+Final qualitative imbalance:    1.651530
+
+============================================
+Run: N=1000000 P=16 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000007 sec
+Sort time:  2.839584 sec
+Initial quantitative imbalance: 0.420548
+Initial qualitative imbalance:  0.895280
+Final quantitative imbalance:   0.420548
+Final qualitative imbalance:    0.895280
+
+============================================
+Run: N=1000000 P=16 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.045669 sec
+Sort time:  0.489711 sec
+Initial quantitative imbalance: 0.420548
+Initial qualitative imbalance:  0.895280
+Final quantitative imbalance:   0.084436
+Final qualitative imbalance:    0.167402
+
+============================================
+Run: N=1000000 P=16 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.194180 sec
+Sort time:  2.101138 sec
+Initial quantitative imbalance: 0.420548
+Initial qualitative imbalance:  0.896236
+Final quantitative imbalance:   0.556297
+Final qualitative imbalance:    1.345243
+
+============================================
+Run: N=1000000 P=32 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000016 sec
+Sort time:  39.291796 sec
+Initial quantitative imbalance: 3.109126
+Initial qualitative imbalance:  4.265288
+Final quantitative imbalance:   3.109126
+Final qualitative imbalance:    4.265288
+
+============================================
+Run: N=1000000 P=32 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.100275 sec
+Sort time:  1.431864 sec
+Initial quantitative imbalance: 3.109126
+Initial qualitative imbalance:  4.265288
+Final quantitative imbalance:   1.291698
+Final qualitative imbalance:    1.530588
+
+============================================
+Run: N=1000000 P=32 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.384317 sec
+Sort time:  2.185223 sec
+Initial quantitative imbalance: 3.109126
+Initial qualitative imbalance:  4.267369
+Final quantitative imbalance:   1.315486
+Final qualitative imbalance:    2.175804
+
+============================================
+Run: N=1000000 P=32 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000007 sec
+Sort time:  2.954952 sec
+Initial quantitative imbalance: 1.066018
+Initial qualitative imbalance:  1.798993
+Final quantitative imbalance:   1.066018
+Final qualitative imbalance:    1.798993
+
+============================================
+Run: N=1000000 P=32 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.041196 sec
+Sort time:  0.520988 sec
+Initial quantitative imbalance: 1.066018
+Initial qualitative imbalance:  1.798993
+Final quantitative imbalance:   0.657560
+Final qualitative imbalance:    1.013989
+
+============================================
+Run: N=1000000 P=32 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.161454 sec
+Sort time:  1.109551 sec
+Initial quantitative imbalance: 1.066018
+Initial qualitative imbalance:  1.801295
+Final quantitative imbalance:   0.728894
+Final qualitative imbalance:    1.722575
+
+============================================
+Run: N=1000000 P=64 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000025 sec
+Sort time:  39.296346 sec
+Initial quantitative imbalance: 4.509250
+Initial qualitative imbalance:  6.114358
+Final quantitative imbalance:   4.509250
+Final qualitative imbalance:    6.114358
+
+============================================
+Run: N=1000000 P=64 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.098261 sec
+Sort time:  1.432281 sec
+Initial quantitative imbalance: 4.509250
+Initial qualitative imbalance:  6.114358
+Final quantitative imbalance:   2.082538
+Final qualitative imbalance:    2.384408
+
+============================================
+Run: N=1000000 P=64 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.389265 sec
+Sort time:  2.240935 sec
+Initial quantitative imbalance: 4.509250
+Initial qualitative imbalance:  6.117261
+Final quantitative imbalance:   2.112096
+Final qualitative imbalance:    3.236311
+
+============================================
+Run: N=1000000 P=64 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000013 sec
+Sort time:  2.976194 sec
+Initial quantitative imbalance: 1.807386
+Initial qualitative imbalance:  2.738069
+Final quantitative imbalance:   1.807386
+Final qualitative imbalance:    2.738069
+
+============================================
+Run: N=1000000 P=64 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.038863 sec
+Sort time:  0.521017 sec
+Initial quantitative imbalance: 1.807386
+Initial qualitative imbalance:  2.738069
+Final quantitative imbalance:   1.357890
+Final qualitative imbalance:    1.763931
+
+============================================
+Run: N=1000000 P=64 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.162466 sec
+Sort time:  1.110958 sec
+Initial quantitative imbalance: 1.807386
+Initial qualitative imbalance:  2.741135
+Final quantitative imbalance:   1.422922
+Final qualitative imbalance:    2.643215
+
+============================================
+Run: N=1000000 P=128 s=2 mode=no_lb cl=default
+============================================
+LB time:    0.000028 sec
+Sort time:  43.383603 sec
+Initial quantitative imbalance: 6.454972
+Initial qualitative imbalance:  8.704639
+Final quantitative imbalance:   6.454972
+Final qualitative imbalance:    8.704639
+
+============================================
+Run: N=1000000 P=128 s=2 mode=with_lb cl=default
+============================================
+LB time:    0.097502 sec
+Sort time:  1.433162 sec
+Initial quantitative imbalance: 6.454972
+Initial qualitative imbalance:  8.704639
+Final quantitative imbalance:   3.110229
+Final qualitative imbalance:    3.518018
+
+============================================
+Run: N=1000000 P=128 s=2 mode=with_lb cl=rand
+============================================
+LB time:    0.366112 sec
+Sort time:  2.428441 sec
+Initial quantitative imbalance: 6.454972
+Initial qualitative imbalance:  8.708718
+Final quantitative imbalance:   3.167748
+Final qualitative imbalance:    4.707081
+
+============================================
+Run: N=1000000 P=128 s=8 mode=no_lb cl=default
+============================================
+LB time:    0.000032 sec
+Sort time:  3.056600 sec
+Initial quantitative imbalance: 2.744684
+Initial qualitative imbalance:  3.999257
+Final quantitative imbalance:   2.744684
+Final qualitative imbalance:    3.999257
+
+============================================
+Run: N=1000000 P=128 s=8 mode=with_lb cl=default
+============================================
+LB time:    0.040018 sec
+Sort time:  0.651483 sec
+Initial quantitative imbalance: 2.744684
+Initial qualitative imbalance:  3.999257
+Final quantitative imbalance:   2.165115
+Final qualitative imbalance:    2.687548
+
+============================================
+Run: N=1000000 P=128 s=8 mode=with_lb cl=rand
+============================================
+LB time:    0.163461 sec
+Sort time:  1.110151 sec
+Initial quantitative imbalance: 2.744684
+Initial qualitative imbalance:  4.003454
+Final quantitative imbalance:   2.247087
+Final qualitative imbalance:    3.869522
+
+============================================
+All experiments completed at Sun May 10 10:51:50 PM CDT 2026
+============================================
+
+Output files in outputs/ directory:
+-rw-rw---- 1 apour3 csece566_dutt 6888468 May 10 22:42 outputs/sorted_no_lb_1000000_1_1.txt
+-rw-rw---- 1 apour3 csece566_dutt 8977537 May 10 22:50 outputs/sorted_no_lb_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8980505 May 10 22:51 outputs/sorted_no_lb_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976501 May 10 22:47 outputs/sorted_no_lb_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976223 May 10 22:47 outputs/sorted_no_lb_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976645 May 10 22:48 outputs/sorted_no_lb_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979613 May 10 22:48 outputs/sorted_no_lb_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976933 May 10 22:49 outputs/sorted_no_lb_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979901 May 10 22:49 outputs/sorted_no_lb_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976431 May 10 22:45 outputs/sorted_no_lb_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976238 May 10 22:46 outputs/sorted_no_lb_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  688930 May 10 22:39 outputs/sorted_no_lb_100000_1_1.txt
+-rw-rw---- 1 apour3 csece566_dutt  798877 May 10 22:44 outputs/sorted_no_lb_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  799078 May 10 22:44 outputs/sorted_no_lb_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797841 May 10 22:42 outputs/sorted_no_lb_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797722 May 10 22:42 outputs/sorted_no_lb_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797985 May 10 22:43 outputs/sorted_no_lb_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798186 May 10 22:43 outputs/sorted_no_lb_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  798273 May 10 22:43 outputs/sorted_no_lb_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798474 May 10 22:43 outputs/sorted_no_lb_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797771 May 10 22:42 outputs/sorted_no_lb_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797595 May 10 22:42 outputs/sorted_no_lb_100000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8977537 May 10 22:51 outputs/sorted_with_lb_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8980505 May 10 22:51 outputs/sorted_with_lb_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976501 May 10 22:47 outputs/sorted_with_lb_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976223 May 10 22:47 outputs/sorted_with_lb_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976645 May 10 22:48 outputs/sorted_with_lb_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979613 May 10 22:48 outputs/sorted_with_lb_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976933 May 10 22:49 outputs/sorted_with_lb_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979901 May 10 22:49 outputs/sorted_with_lb_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976431 May 10 22:45 outputs/sorted_with_lb_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976238 May 10 22:46 outputs/sorted_with_lb_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  798877 May 10 22:44 outputs/sorted_with_lb_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  799078 May 10 22:44 outputs/sorted_with_lb_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797841 May 10 22:42 outputs/sorted_with_lb_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797722 May 10 22:43 outputs/sorted_with_lb_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797985 May 10 22:43 outputs/sorted_with_lb_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798186 May 10 22:43 outputs/sorted_with_lb_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  798273 May 10 22:43 outputs/sorted_with_lb_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798474 May 10 22:43 outputs/sorted_with_lb_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797771 May 10 22:42 outputs/sorted_with_lb_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797595 May 10 22:42 outputs/sorted_with_lb_100000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8977537 May 10 22:51 outputs/sorted_with_lb_rand_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8980505 May 10 22:51 outputs/sorted_with_lb_rand_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976501 May 10 22:47 outputs/sorted_with_lb_rand_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976223 May 10 22:47 outputs/sorted_with_lb_rand_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976645 May 10 22:48 outputs/sorted_with_lb_rand_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979613 May 10 22:48 outputs/sorted_with_lb_rand_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976933 May 10 22:49 outputs/sorted_with_lb_rand_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8979901 May 10 22:49 outputs/sorted_with_lb_rand_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976431 May 10 22:46 outputs/sorted_with_lb_rand_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt 8976238 May 10 22:46 outputs/sorted_with_lb_rand_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  798877 May 10 22:44 outputs/sorted_with_lb_rand_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  799078 May 10 22:44 outputs/sorted_with_lb_rand_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797841 May 10 22:42 outputs/sorted_with_lb_rand_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797722 May 10 22:43 outputs/sorted_with_lb_rand_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797985 May 10 22:43 outputs/sorted_with_lb_rand_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798186 May 10 22:43 outputs/sorted_with_lb_rand_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  798273 May 10 22:43 outputs/sorted_with_lb_rand_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  798474 May 10 22:44 outputs/sorted_with_lb_rand_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt  797771 May 10 22:42 outputs/sorted_with_lb_rand_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt  797595 May 10 22:42 outputs/sorted_with_lb_rand_100000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:42 outputs/stats_no_lb_1000000_1_1.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:50 outputs/stats_no_lb_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:51 outputs/stats_no_lb_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:47 outputs/stats_no_lb_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:47 outputs/stats_no_lb_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:48 outputs/stats_no_lb_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:48 outputs/stats_no_lb_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:49 outputs/stats_no_lb_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:49 outputs/stats_no_lb_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:45 outputs/stats_no_lb_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:46 outputs/stats_no_lb_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:39 outputs/stats_no_lb_100000_1_1.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:44 outputs/stats_no_lb_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:44 outputs/stats_no_lb_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:42 outputs/stats_no_lb_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:42 outputs/stats_no_lb_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:43 outputs/stats_no_lb_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:43 outputs/stats_no_lb_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:43 outputs/stats_no_lb_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:43 outputs/stats_no_lb_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:42 outputs/stats_no_lb_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:42 outputs/stats_no_lb_100000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     302 May 10 22:51 outputs/stats_with_lb_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     302 May 10 22:51 outputs/stats_with_lb_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:47 outputs/stats_with_lb_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:47 outputs/stats_with_lb_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:48 outputs/stats_with_lb_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:48 outputs/stats_with_lb_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:49 outputs/stats_with_lb_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:49 outputs/stats_with_lb_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:45 outputs/stats_with_lb_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:46 outputs/stats_with_lb_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     302 May 10 22:44 outputs/stats_with_lb_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     302 May 10 22:44 outputs/stats_with_lb_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:42 outputs/stats_with_lb_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:43 outputs/stats_with_lb_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:43 outputs/stats_with_lb_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:43 outputs/stats_with_lb_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:43 outputs/stats_with_lb_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     301 May 10 22:43 outputs/stats_with_lb_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:42 outputs/stats_with_lb_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     300 May 10 22:42 outputs/stats_with_lb_100000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:51 outputs/stats_with_lb_rand_1000000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:51 outputs/stats_with_lb_rand_1000000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:47 outputs/stats_with_lb_rand_1000000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:47 outputs/stats_with_lb_rand_1000000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:48 outputs/stats_with_lb_rand_1000000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:48 outputs/stats_with_lb_rand_1000000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:49 outputs/stats_with_lb_rand_1000000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:49 outputs/stats_with_lb_rand_1000000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     297 May 10 22:46 outputs/stats_with_lb_rand_1000000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     297 May 10 22:46 outputs/stats_with_lb_rand_1000000_8_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:44 outputs/stats_with_lb_rand_100000_128_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     299 May 10 22:44 outputs/stats_with_lb_rand_100000_128_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:42 outputs/stats_with_lb_rand_100000_16_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:43 outputs/stats_with_lb_rand_100000_16_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:43 outputs/stats_with_lb_rand_100000_32_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:43 outputs/stats_with_lb_rand_100000_32_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:43 outputs/stats_with_lb_rand_100000_64_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     298 May 10 22:44 outputs/stats_with_lb_rand_100000_64_8.txt
+-rw-rw---- 1 apour3 csece566_dutt     297 May 10 22:42 outputs/stats_with_lb_rand_100000_8_2.txt
+-rw-rw---- 1 apour3 csece566_dutt     297 May 10 22:42 outputs/stats_with_lb_rand_100000_8_8.txt

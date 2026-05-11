@@ -1,0 +1,14 @@
+=== Parallel Sort Statistics ===
+Processors: 16
+Mode: with_lb
+CL estimator: rand
+
+--- Timing ---
+LB time:    0.194180 sec
+Sort time:  2.101138 sec
+
+--- Imbalance Metrics ---
+Initial quantitative: 0.420548
+Initial qualitative:  0.896236
+Final quantitative:   0.556297
+Final qualitative:    1.345243

@@ -1,5 +1,6 @@
 .DS_Store
-outputs/
 CLAUDE.md
 .claude/
 parallel_sort
+old/
+outputs/sorted*
