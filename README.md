@@ -68,7 +68,7 @@ mkdir -p outputs
 
 ### Option 1: Batch Submission (recommended)
 
-Runs the full suite — sequential baseline (P=1, per N), then N={100k, 1M} x P={8,16,32,64,128} x s={2, P} x {no_lb, with_lb (default), with_lb (rand CL)}:
+Runs the full suite — sequential baseline (P=1, per N), then N={100k, 1M} x P={8,16,32,64,128} x s={2, 8} x {no_lb, with_lb (default), with_lb (rand CL)}:
 
 ```bash
 sbatch scripts/run_full_experiment.sh

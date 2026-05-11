@@ -25,7 +25,7 @@ N_VALUES="100000 1000000"
 
 echo "============================================"
 echo "  Full Experiment Grid"
-echo "  P=1 (baseline), then P=8..128 x s=2/P x {no_lb, with_lb, with_lb+rand}"
+echo "  P=1 (baseline), then P=8..128 x s=2/8 x {no_lb, with_lb, with_lb+rand}"
 echo "  N=100000/1000000"
 echo "============================================"
 
@@ -50,7 +50,7 @@ done
 
 for N in $N_VALUES; do
     for P in $P_VALUES; do
-        for s in 2 $P; do
+        for s in 2 8; do
             for config in $CONFIGS; do
                 mode=${config%:*}
                 cl=${config#*:}

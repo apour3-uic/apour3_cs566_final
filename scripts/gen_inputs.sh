@@ -3,7 +3,9 @@
 # Usage: run from the project root directory (where input_gen lives).
 #
 # File naming: A_vector_{N}_{P}_{s}.txt / pivot_vector_{N}_{P}_{s}.txt
-# s values tested: 2 (highly skewed) and P (balanced)
+# s values tested: 2 (heavy skew) and 8 (mild skew). Both are fixed across P
+# so that the heaviest-loaded buckets are identical at every P — required for
+# apples-to-apples scaling of the LB algorithm.
 # P values: 8, 16, 32, 64, 128
 # N values: 100000, 1000000
 
@@ -22,12 +24,7 @@ N_VALUES="100000 1000000"
 
 for N in $N_VALUES; do
     for P in $P_VALUES; do
-        for s in 2 $P; do
-            # Skip duplicate when P=2 (s=2 and s=P are the same)
-            if [ "$s" -eq 2 ] && [ "$P" -eq 2 ]; then
-                continue
-            fi
-
+        for s in 2 8; do
             AFILE="$OUTDIR/A_vector_${N}_${P}_${s}.txt"
             PFILE="$OUTDIR/pivot_vector_${N}_${P}_${s}.txt"
 
