@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     srand(rank + 67); /* Random seed */
 
     /* ================================================================ */
-    /*  Phase 1: Pivot-based distribution                                */
+    /*  Phase 1: Pivot-based distribution                               */
     /* ================================================================ */
     {
         if (rank == 0) {
@@ -196,19 +196,21 @@ int main(int argc, char *argv[]) {
     }
 
     /* ================================================================ */
-    /*  Phase 2: Initial Load Estimation                                 */
+    /*  Phase 2: Initial Load Estimation                                */
     /* ================================================================ */
     double local_cl = estimate_cl_func(local_array.data, local_array.size);
 
     int all_sizes[p];
     double all_loads[p];
-    MPI_Allgather(&local_array.size, 1, MPI_INT,
-                  all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Allgather(&local_cl, 1, MPI_DOUBLE,
-                  all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+    MPI_Gather(&local_array.size, 1, MPI_INT,
+               all_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&local_cl, 1, MPI_DOUBLE,
+               all_loads, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    metrics.initial_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
-    metrics.initial_qual_imbalance  = compute_qualitative_imbalance(all_loads, p);
+    if (rank == 0) {
+        metrics.initial_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
+        metrics.initial_qual_imbalance  = compute_qualitative_imbalance(all_loads, p);
+    }
 
     /* ---- Verify PSOR after pivoting ---- */
     int local_min = 0, local_max = 0;
@@ -223,7 +225,7 @@ int main(int argc, char *argv[]) {
     check_psor_or_abort(rank, p, local_min, local_max, "post-pivot");
 
     /* ================================================================ */
-    /*  Phase 3: Load Balancing (conditional)                            */
+    /*  Phase 3: Load Balancing (conditional)                           */
     /* ================================================================ */
     /* --- sync point 1: between pivot and LB --- */
     MPI_Barrier(MPI_COMM_WORLD);
@@ -250,7 +252,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* ================================================================ */
-    /*  Phase 4: Local Sorting (insertion sort)                          */
+    /*  Phase 4: Local Sorting (insertion sort)                         */
     /* ================================================================ */
     /* --- sync point 2: between LB and sort --- */
     MPI_Barrier(MPI_COMM_WORLD);
@@ -274,7 +276,7 @@ int main(int argc, char *argv[]) {
     double sort_time = t_after_sort - t_sort_start;
 
     /* ================================================================ */
-    /*  Phase 5: Final PSOR + sortedness verification                    */
+    /*  Phase 5: Final PSOR + sortedness verification                   */
     /* ================================================================ */
     /* Each rank scans its own subarray; first violator aborts the job. */
     for (int i = 1; i < local_array.size; i++) {
@@ -292,7 +294,7 @@ int main(int argc, char *argv[]) {
     check_psor_or_abort(rank, p, sorted_min, sorted_max, "post-sort");
 
     /* ================================================================ */
-    /*  Phase 6: Output (token-passed file write) + statistics           */
+    /*  Phase 6: Output (token-passed file write) + statistics          */
     /* ================================================================ */
     /*
      * Derive a tag from the input filename so output files are unique per run.
@@ -356,6 +358,7 @@ int main(int argc, char *argv[]) {
         fprintf(fp, "=== Parallel Sort Statistics ===\n");
         fprintf(fp, "Processors: %d\n", p);
         fprintf(fp, "Mode: %s\n", enable_lb ? "with_lb" : "no_lb");
+        fprintf(fp, "CL estimator: %s\n", rand_cl ? "rand" : "default");
         fprintf(fp, "\n--- Timing ---\n");
         fprintf(fp, "LB time:    %.6f sec\n", lb_time);
         fprintf(fp, "Sort time:  %.6f sec\n", sort_time);

@@ -1,6 +1,10 @@
 Differences from presentation:
-- File structure consolidated into load_balance.c/load_balance.h (our algorithms) and main.c (everything else)
-- Timing simplified: only record LB + insertion sorting time on proc 0
+- Consolidated file structure into load_balance.c/load_balance.h (our algorithms) and main.c (everything else)
+- Simplified timing: only record LB + insertion sorting time on proc 0
 Other code updates:
 - Fixed bug in pivoting that left last proc empty
-- Fixed bug in LB that led to inaccurate distribution
+- Fixed bugs in LB that led to inaccurate distribution
+  - Not updating CL before second phase
+  - Incorrectly capping length of subarrays sent between procs
+- Removed unnecessary MPI_Barriers
+- Replaced MPI_Allgathers with MPI_Gather when only read by proc 0

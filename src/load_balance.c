@@ -167,7 +167,7 @@ static void subarray_grow(SubArray *sa, int extra) {
 /* ------------------------------------------------------------------ */
 
 static int compute_k(double my_load, int my_size,
-                     double neighbor_load, int max_k) {
+                     double neighbor_load) {
     if (my_load <= neighbor_load) return 0;
     if (my_size <= 1) return 0;
 
@@ -177,7 +177,7 @@ static int compute_k(double my_load, int my_size,
 
     int k = (int)(load_diff / (2.0 * avg_cl_per_elem) + 0.5);
     if (k < 1) k = 1;
-    if (k > max_k) k = max_k;
+    if (k > my_size - 1) k = my_size - 1;
     return k;
 }
 
@@ -206,9 +206,7 @@ static void lb_exchange(SubArray *local_array, int rank, int partner,
                  &partner_cl, 1, MPI_DOUBLE, partner, tag_lo_send,
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    int max_k = local_array->size / 4;
-    if (max_k < 1) max_k = 1;
-    int k = compute_k(my_cl, local_array->size, partner_cl, max_k);
+    int k = compute_k(my_cl, local_array->size, partner_cl);
 
     int is_lower = (rank < partner);
     int my_send_tag = is_lower ? tag_lo_send + 1 : tag_hi_send + 1;
@@ -284,7 +282,6 @@ void synchronous_lb_linear(int rank, int p,
         } else if (rank % 2 == 1) {
             lb_exchange(local_array, rank, rank - 1, tag_a_lo, tag_a_hi);
         }
-        MPI_Barrier(MPI_COMM_WORLD);
 
         /* Phase B: pairs (1,2), (3,4), (5,6), ... */
         int tag_b_lo = 300 + round * 10;
@@ -294,17 +291,19 @@ void synchronous_lb_linear(int rank, int p,
         } else if (rank % 2 == 0 && rank > 0) {
             lb_exchange(local_array, rank, rank - 1, tag_b_lo, tag_b_hi);
         }
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    /* Final imbalance measurement after LB, before sorting */
+    /* Final imbalance measurement after LB, before sorting. Only rank 0
+     * consumes the result, so gather rather than allgather. */
     int all_sizes[p];
     double final_cl = estimate_cl_func(local_array->data, local_array->size);
-    MPI_Allgather(&local_array->size, 1, MPI_INT,
-                  all_sizes, 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Allgather(&final_cl, 1, MPI_DOUBLE,
-                  all_loads, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+    MPI_Gather(&local_array->size, 1, MPI_INT,
+               all_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&final_cl, 1, MPI_DOUBLE,
+               all_loads, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    metrics->final_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
-    metrics->final_qual_imbalance = compute_qualitative_imbalance(all_loads, p);
+    if (rank == 0) {
+        metrics->final_quant_imbalance = compute_quantitative_imbalance(all_sizes, p);
+        metrics->final_qual_imbalance = compute_qualitative_imbalance(all_loads, p);
+    }
 }
