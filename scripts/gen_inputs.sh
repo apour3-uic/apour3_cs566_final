@@ -51,6 +51,19 @@ for N in $N_VALUES; do
     done
 done
 
+# P=1 sequential baseline: N random ints, empty pivot file.
+# Generated directly here rather than via input_gen, which is not known to
+# accept P=1. The integer range matches input_gen's typical output.
+for N in $N_VALUES; do
+    AFILE="$OUTDIR/A_vector_${N}_1_1.txt"
+    PFILE="$OUTDIR/pivot_vector_${N}_1_1.txt"
+    echo "Generating P=1 baseline N=$N ..."
+    awk -v n="$N" 'BEGIN { srand(n); for (i = 0; i < n; i++) printf "%d%s", int(rand()*1000000), (i==n-1 ? "\n" : ",") }' > "$AFILE"
+    : > "$PFILE"
+    echo "  -> $AFILE"
+    echo "  -> $PFILE"
+done
+
 echo ""
 echo "Done. Files in $OUTDIR/:"
 ls "$OUTDIR/" | sort
