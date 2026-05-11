@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=psort_phase4
-#SBATCH --output=outputs/psort_phase4_%j.log
-#SBATCH --error=outputs/psort_phase4_%j.err
+#SBATCH --job-name=psort_full
+#SBATCH --output=outputs/psort_full_%j.log
+#SBATCH --error=outputs/psort_full_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=128
 #SBATCH --cpus-per-task=1
@@ -24,7 +24,7 @@ P_VALUES="8 16 32 64 128"
 N_VALUES="100000 1000000"
 
 echo "============================================"
-echo "  Phase 1-6 Full Pipeline Test"
+echo "  Full Experiment Grid"
 echo "  P=8..128, N=100000/1000000, s=2/P"
 echo "============================================"
 

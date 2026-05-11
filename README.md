@@ -30,8 +30,10 @@ src/
 └── output.c/h          # Phase 5 (verify_psor_final), Phase 6 (token-pass write, stats)
 
 scripts/
-├── run_phase4_test.sh  # Full experiment suite (Slurm batch)
-└── run_quick_test.sh   # Quick interactive test
+├── gen_inputs.sh            # Generates input/pivot files for the experiment grid
+├── run_full_experiment.sh   # Full experiment suite (Slurm batch)
+├── run_quick_test.sh        # Quick interactive test
+└── run_rand_test.sh         # Compares default vs random CL estimator
 
 Makefile                # Build with mpicc
 ```
@@ -66,20 +68,13 @@ mkdir -p outputs
 
 ### Option 1: Batch Submission (recommended)
 
-Runs the full suite — sequential baseline (P=1) plus P={2,4,8} x {no_lb, with_lb} for both input sets:
+Runs the full suite — N={100k, 1M} x P={8,16,32,64,128} x s={2, P} x {no_lb, with_lb}:
 
 ```bash
-sbatch scripts/run_phase4_test.sh
+sbatch scripts/run_full_experiment.sh
 ```
 
-To test the early phase, you can use following commands:
-```bash
-sbatch scripts/run_phase1_test.sh
-sbatch scripts/run_phase2_test.sh
-sbatch scripts/run_phase3_test.sh
-```
-
-Monitor with `squeue -u $USER`. Results go to `outputs/psort_phase4_<jobid>.log`.
+Monitor with `squeue -u $USER`. Results go to `outputs/psort_full_<jobid>.log`.
 
 ### Option 2: Interactive Session
 

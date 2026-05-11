@@ -4,7 +4,7 @@
 #
 # First get an interactive allocation:
 #   salloc --job-name "ParSort_Test" --cpus-per-task 1 --ntasks=8 --time 00:10:00 --account=csece566_dutt
-#   cd /home/yqu30/csece566_dutt_link/yqu30/final
+#   cd /home/apour3/csece566_dutt_link/apour3/final
 #   module load OpenMPI
 #   make clean && make
 #   bash scripts/run_quick_test.sh
